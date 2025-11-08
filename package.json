@@ -31,7 +31,7 @@
       "explorer": [
         {
           "id": "tsedSidePanel",
-          "name": "React Dev Tools",
+          "name": "Tsed's React Dev Tools",
           "type": "webview"
         }
       ]
