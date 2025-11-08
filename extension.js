@@ -1,36 +1,33 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
+const SidePanelProvider = require('./src/webview/sidePanelProvider');
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-
-/**
- * @param {vscode.ExtensionContext} context
- */
 function activate(context) {
+  console.log('Congratulations, your extension "tsed-s-react-dev-kit" is now active!');
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "tsed-s-react-dev-kit" is now active!');
+  // Register the side panel webview
+  const provider = new SidePanelProvider(context.extensionUri);
+  
+  const sidePanelRegistration = vscode.window.registerWebviewViewProvider(
+    'tsedSidePanel',
+    provider
+  );
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('tsed-s-react-dev-kit.helloWorld', function () {
-		// The code you place here will be executed every time your command is executed
+  // The original hello world command
+  const disposable = vscode.commands.registerCommand('tsed-s-react-dev-kit.helloWorld', function () {
+    vscode.window.showInformationMessage('Tseds React Dev Kit says Hello!');
+  });
 
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Tseds React Dev Kit!');
-	});
+  // Command to focus on the side panel
+  const openPanelCommand = vscode.commands.registerCommand('tsed-s-react-dev-kit.openSidePanel', function () {
+    vscode.commands.executeCommand('tsedSidePanel.focus');
+  });
 
-	context.subscriptions.push(disposable);
+  context.subscriptions.push(disposable, openPanelCommand, sidePanelRegistration);
 }
 
-// This method is called when your extension is deactivated
 function deactivate() {}
 
 module.exports = {
-	activate,
-	deactivate
+  activate,
+  deactivate
 }

@@ -9,13 +9,39 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "*"
+    
+  ],
   "main": "./extension.js",
   "contributes": {
-    "commands": [{
-      "command": "tsed-s-react-dev-kit.helloWorld",
-      "title": "Hello World"
-    }]
+    "commands": [
+      {
+        "command": "tsed-s-react-dev-kit.helloWorld",
+        "title": "Hello World",
+        "category": "TsED React Kit"
+      },
+      {
+        "command": "tsed-s-react-dev-kit.openSidePanel",
+        "title": "Open React Dev Panel",
+        "category": "TsED React Kit"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "tsedSidePanel",
+          "name": "React Dev Tools",
+          "type": "webview"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "tsedSidePanel",
+        "contents": "Click to open React Dev Tools panel"
+      }
+    ]
   },
   "scripts": {
     "lint": "eslint .",
