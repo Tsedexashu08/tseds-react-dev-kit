@@ -1,7 +1,7 @@
-const vscode = require('vscode');
-const path = require('path');
-const https = require('https');
-const http = require('http');
+const vscode = require("vscode");
+const path = require("path");
+const https = require("https");
+const http = require("http");
 
 class SidePanelProvider {
   constructor(extensionUri) {
@@ -14,59 +14,66 @@ class SidePanelProvider {
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [
-        vscode.Uri.joinPath(this._extensionUri, 'src', 'webviews')
-      ]
+        vscode.Uri.joinPath(this._extensionUri, "src", "webviews"),
+      ],
     };
 
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     // Handle messages from webview
-    webviewView.webview.onDidReceiveMessage(data => {
+    webviewView.webview.onDidReceiveMessage((data) => {
       switch (data.type) {
-        case 'showInfo':
-          vscode.window.showInformationMessage(`Tsed's React Dev Tools: ${data.message}`);
+        case "showInfo":
+          vscode.window.showInformationMessage(
+            `Tsed's React Dev Tools: ${data.message}`
+          );
           break;
-        case 'insertCode':
+        case "insertCode":
           this._insertCode(data.code);
           break;
-        case 'runCommand':
+        case "runCommand":
           vscode.commands.executeCommand(data.command);
           break;
-        case 'analyzeProps':
+        case "analyzeProps":
           this._analyzePropDrilling();
           break;
-        case 'fetchSchemaData':
-          this._simulateSchemaData().then(schemaData => {
+        case "fetchSchemaData":
+          this._fetchSchemaData().then((schemaData) => {
             webviewView.webview.postMessage({
-              type: 'schemaDataReceived',
-              data: schemaData
+              type: "schemaDataReceived",
+              data: schemaData,
             });
           });
           break;
-        case 'fetchCustomAPI':
-          this._fetchRealAPI(data.endpoint, data.method, data.headers, data.body)
-            .then(apiData => {
+        case "fetchCustomAPI":
+          this._fetchRealAPI(
+            data.endpoint,
+            data.method,
+            data.headers,
+            data.body
+          )
+            .then((apiData) => {
               webviewView.webview.postMessage({
-                type: 'apiDataReceived',
-                data: apiData
+                type: "apiDataReceived",
+                data: apiData,
               });
             })
-            .catch(error => {
+            .catch((error) => {
               webviewView.webview.postMessage({
-                type: 'apiError',
-                error: error.message
+                type: "apiError",
+                error: error.message,
               });
             });
           break;
-        case 'exportData':
+        case "exportData":
           vscode.env.clipboard.writeText(data.data);
-          vscode.window.showInformationMessage('Data copied to clipboard!');
+          vscode.window.showInformationMessage("Data copied to clipboard!");
           break;
       }
     });
   }
 
-  async _fetchRealAPI(endpoint, method = 'GET', headers = {}, body = null) {
+  async _fetchRealAPI(endpoint, method = "GET", headers = {}, body = null) {
     return new Promise((resolve, reject) => {
       try {
         // Validate URL
@@ -79,68 +86,76 @@ class SidePanelProvider {
         }
 
         // Choose http or https module
-        const httpModule = url.protocol === 'https:' ? https : http;
+        const httpModule = url.protocol === "https:" ? https : http;
 
         // Prepare request options
         const options = {
           method: method.toUpperCase(),
           headers: {
-            'User-Agent': 'VSCode-React-Dev-Tools/1.0.0',
-            'Accept': 'application/json',
-            ...headers
+            "User-Agent": "VSCode-React-Dev-Tools/1.0.0",
+            Accept: "application/json",
+            ...headers,
           },
-          timeout: 30000 // 30 seconds timeout
+          timeout: 30000, // 30 seconds timeout
         };
 
         // Add body for non-GET requests
         let requestBody = null;
-        if (method.toUpperCase() !== 'GET' && body) {
-          requestBody = typeof body === 'string' ? body : JSON.stringify(body);
-          options.headers['Content-Type'] = 'application/json';
-          options.headers['Content-Length'] = Buffer.byteLength(requestBody);
+        if (method.toUpperCase() !== "GET" && body) {
+          requestBody = typeof body === "string" ? body : JSON.stringify(body);
+          options.headers["Content-Type"] = "application/json";
+          options.headers["Content-Length"] = Buffer.byteLength(requestBody);
         }
 
-        vscode.window.showInformationMessage(`Fetching data from: ${endpoint}`);
-
+        const startTime = Date.now();
+        
         const req = httpModule.request(url, options, (res) => {
-          let data = '';
+          let data = "";
+          const responseTime = Date.now() - startTime;
 
-          res.on('data', (chunk) => {
+          res.on("data", (chunk) => {
             data += chunk;
           });
 
-          res.on('end', () => {
+          res.on("end", () => {
             try {
               // Parse JSON response
               const parsedData = JSON.parse(data);
-              
-              // Format the response for our visualization
-              const formattedData = this._formatAPIResponse(parsedData, res.statusCode);
+
+              // Format the response using only real API data
+              const formattedData = this._formatAPIResponse(
+                parsedData,
+                res.statusCode,
+                responseTime,
+                res.headers
+              );
               resolve(formattedData);
             } catch (parseError) {
-              // If not JSON, return as text
+              // If not JSON, return as text with real metrics
               resolve({
                 totalRecords: 1,
-                responseTime: 0,
-                dataSize: Math.round(Buffer.byteLength(data) / 1024 * 100) / 100,
-                cacheStatus: res.headers['cache-control'] || 'UNKNOWN',
+                responseTime: responseTime,
+                dataSize: Math.round((Buffer.byteLength(data) / 1024) * 100) / 100,
+                cacheStatus: res.headers["cache-control"] || "unknown",
                 statusCode: res.statusCode,
-                contentType: res.headers['content-type'],
-                rawData: data,
+                contentType: res.headers["content-type"] || "text/plain",
+                rawData: data.substring(0, 5000), // Limit raw data size
                 users: this._extractUsersData(data),
-                fullResponse: data
+                fullResponse: data,
+                headers: res.headers,
+                timestamp: new Date().toISOString()
               });
             }
           });
         });
 
-        req.on('error', (error) => {
+        req.on("error", (error) => {
           reject(new Error(`Request failed: ${error.message}`));
         });
 
-        req.on('timeout', () => {
+        req.on("timeout", () => {
           req.destroy();
-          reject(new Error('Request timeout after 30 seconds'));
+          reject(new Error("Request timeout after 30 seconds"));
         });
 
         // Send body if exists
@@ -149,84 +164,104 @@ class SidePanelProvider {
         }
 
         req.end();
-
       } catch (error) {
         reject(new Error(`API request setup failed: ${error.message}`));
       }
     });
   }
 
-  _formatAPIResponse(data, statusCode) {
-    // Try to extract meaningful data from various API response structures
-    let users = this._extractUsersData(data);
-    
+  _formatAPIResponse(data, statusCode, responseTime, headers) {
+    // Extract meaningful data from the actual API response
+    const users = this._extractUsersData(data);
+    const dataSize = Math.round((JSON.stringify(data).length / 1024) * 100) / 100;
+
     return {
-      totalRecords: Array.isArray(data) ? data.length : 
-                   (data.data && Array.isArray(data.data)) ? data.data.length : 
-                   (data.users && Array.isArray(data.users)) ? data.users.length : 
-                   (data.items && Array.isArray(data.items)) ? data.items.length : 1,
-      responseTime: 0,
-      dataSize: Math.round(JSON.stringify(data).length / 1024 * 100) / 100,
-      cacheStatus: 'LIVE',
+      totalRecords: this._calculateTotalRecords(data),
+      responseTime: responseTime,
+      dataSize: dataSize,
+      cacheStatus: headers["cache-control"] || "unknown",
       statusCode: statusCode,
+      contentType: headers["content-type"] || "application/json",
       users: users,
-      fullResponse: data
+      fullResponse: data,
+      headers: headers,
+      timestamp: new Date().toISOString()
     };
   }
 
+  _calculateTotalRecords(data) {
+    // Calculate total records based on actual API response structure
+    if (Array.isArray(data)) return data.length;
+    if (data && typeof data === 'object') {
+      if (Array.isArray(data.data)) return data.data.length;
+      if (Array.isArray(data.users)) return data.users.length;
+      if (Array.isArray(data.items)) return data.items.length;
+      if (Array.isArray(data.results)) return data.results.length;
+      return Object.keys(data).length;
+    }
+    return 1;
+  }
+
   _extractUsersData(data) {
-    // Try to find user-like data in various common API structures
+    // Extract user-like data from actual API response
+    let extractedData = [];
+    
+    // Handle array responses
     if (Array.isArray(data)) {
-      return data.slice(0, 10).map((item, index) => ({
-        id: item.id || index + 1,
-        name: item.name || item.username || item.fullName || `User ${index + 1}`,
-        email: item.email || 'N/A',
-        status: item.status || item.active !== undefined ? (item.active ? 'Active' : 'Inactive') : 'Unknown',
-        role: item.role || item.type || 'User'
-      }));
+      extractedData = data.slice(0, 10);
+    } 
+    // Handle nested array structures
+    else if (data && typeof data === 'object') {
+      if (Array.isArray(data.data)) extractedData = data.data.slice(0, 10);
+      else if (Array.isArray(data.users)) extractedData = data.users.slice(0, 10);
+      else if (Array.isArray(data.items)) extractedData = data.items.slice(0, 10);
+      else if (Array.isArray(data.results)) extractedData = data.results.slice(0, 10);
+      else extractedData = [data]; // Single object response
     }
 
-    if (data.data && Array.isArray(data.data)) {
-      return data.data.slice(0, 10).map((item, index) => ({
-        id: item.id || index + 1,
-        name: item.name || item.username || item.fullName || `User ${index + 1}`,
-        email: item.email || 'N/A',
-        status: item.status || item.active !== undefined ? (item.active ? 'Active' : 'Inactive') : 'Unknown',
-        role: item.role || item.type || 'User'
-      }));
-    }
+    // Format the extracted data
+    return extractedData.map((item, index) => {
+      if (typeof item === 'object' && item !== null) {
+        return {
+          id: item.id || index + 1,
+          name: item.name || item.username || item.fullName || item.title || `Item ${index + 1}`,
+          email: item.email || "N/A",
+          status: this._determineStatus(item),
+          role: item.role || item.type || item.category || "N/A",
+          ...item // Include all original properties
+        };
+      }
+      
+      // Handle primitive values
+      return {
+        id: index + 1,
+        name: `Item ${index + 1}`,
+        value: item,
+        status: "N/A",
+        role: "Primitive"
+      };
+    });
+  }
 
-    if (data.users && Array.isArray(data.users)) {
-      return data.users.slice(0, 10).map((item, index) => ({
-        id: item.id || index + 1,
-        name: item.name || item.username || item.fullName || `User ${index + 1}`,
-        email: item.email || 'N/A',
-        status: item.status || item.active !== undefined ? (item.active ? 'Active' : 'Inactive') : 'Unknown',
-        role: item.role || item.type || 'User'
-      }));
-    }
+  _determineStatus(item) {
+    if (item.status) return item.status;
+    if (item.active !== undefined) return item.active ? "Active" : "Inactive";
+    if (item.enabled !== undefined) return item.enabled ? "Enabled" : "Disabled";
+    if (item.published !== undefined) return item.published ? "Published" : "Draft";
+    return "Unknown";
+  }
 
-    if (data.items && Array.isArray(data.items)) {
-      return data.items.slice(0, 10).map((item, index) => ({
-        id: item.id || index + 1,
-        name: item.name || item.username || item.fullName || `User ${index + 1}`,
-        email: item.email || 'N/A',
-        status: item.status || item.active !== undefined ? (item.active ? 'Active' : 'Inactive') : 'Unknown',
-        role: item.role || item.type || 'User'
-      }));
-    }
-
-    // If no array structure found, treat the entire object as a single record
-    return [{
-      id: data.id || 1,
-      name: data.name || data.username || data.fullName || 'Single Record',
-      email: data.email || 'N/A',
-      status: data.status || 'Single',
-      role: data.role || 'Record'
-    }];
+  async _fetchSchemaData() {
+    // For now, return empty schema since we don't have real database connection
+    // This can be extended to connect to actual databases
+    return {
+      tables: [],
+      message: "Database schema feature coming soon. Connect to your database to see real schema data."
+    };
   }
 
   _getHtmlForWebview(webview) {
+    // HTML remains largely the same but with improved UI logic
     return `
       <!DOCTYPE html>
       <html>
@@ -357,6 +392,12 @@ class SidePanelProvider {
             transform: translateY(-1px);
           }
 
+          .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+          }
+
           .btn-secondary {
             background: transparent;
             border: 1px solid var(--border);
@@ -428,6 +469,7 @@ class SidePanelProvider {
             display: flex;
             flex-direction: column;
             gap: 16px;
+            min-height: 100px;
           }
 
           .database-table {
@@ -475,6 +517,7 @@ class SidePanelProvider {
             padding: 6px;
             border-bottom: 1px solid var(--border);
             vertical-align: top;
+            word-break: break-word;
           }
 
           .data-table tr:hover {
@@ -497,76 +540,6 @@ class SidePanelProvider {
 
           .field-optional {
             color: var(--success);
-          }
-
-          .relationship-line {
-            position: relative;
-            height: 30px;
-            margin: 8px 0;
-            display: flex;
-            align-items: center;
-          }
-
-          .relationship-line::before {
-            content: '';
-            position: absolute;
-            left: 20px;
-            right: 20px;
-            height: 2px;
-            background: var(--accent);
-            opacity: 0.6;
-          }
-
-          .relationship-line::after {
-            content: '↕';
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--bg-secondary);
-            padding: 0 8px;
-            color: var(--accent);
-            font-size: 12px;
-          }
-
-          .foreign-key {
-            background: var(--info);
-            color: white;
-            padding: 1px 4px;
-            border-radius: 3px;
-            font-size: 9px;
-            margin-left: 4px;
-          }
-
-          .primary-key {
-            background: var(--success);
-            color: white;
-            padding: 1px 4px;
-            border-radius: 3px;
-            font-size: 9px;
-            margin-left: 4px;
-          }
-
-          .table-relations {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 8px;
-            font-size: 10px;
-            color: var(--text-secondary);
-          }
-
-          .relation-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 6px 8px;
-            flex: 1;
-            margin: 0 4px;
-            text-align: center;
-          }
-
-          .relation-type {
-            font-weight: 600;
-            color: var(--accent);
           }
 
           .stats-grid {
@@ -662,13 +635,146 @@ class SidePanelProvider {
             width: auto;
             white-space: nowrap;
           }
+
+          .loading {
+            opacity: 0.7;
+            pointer-events: none;
+          }
+
+          .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-style: italic;
+          }
+
+          .response-time {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-left: 8px;
+          }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>⚛️ Tsed's React Dev Tools</h1>
-            <div class="subtitle">Professional React Development Assistant for my fellow nerds</div>
+            <div class="subtitle">Professional React Development Assistant</div>
+          </div>
+
+          <!-- API Data Visualization Section - Moved to top as primary feature -->
+          <div class="section">
+            <div class="section-header" onclick="toggleSection('api-visualization')">
+              📊 API Data Explorer
+            </div>
+            <div class="section-content" id="api-visualization">
+              <div class="tabs">
+                <div class="tab active" onclick="switchTab('apiTab')">🌐 API Request</div>
+                <div class="tab" onclick="switchTab('schemaTab')">🗃️ Schema (Coming Soon)</div>
+              </div>
+
+              <div id="apiTab" class="tab-content active">
+                <div class="input-group">
+                  <label for="apiEndpoint">
+                    <span style="margin-right: 6px;">🔗</span>
+                    API Endpoint URL
+                  </label>
+                  <div class="flex-row">
+                    <input 
+                      type="text" 
+                      id="apiEndpoint" 
+                      placeholder="https://jsonplaceholder.typicode.com/users"
+                      value="https://jsonplaceholder.typicode.com/users"
+                    >
+                    <button class="btn btn-info" onclick="testEndpoint()">
+                      🔍 Test
+                    </button>
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label for="requestMethod">
+                    <span style="margin-right: 6px;">⚡</span>
+                    HTTP Method
+                  </label>
+                  <select id="requestMethod">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                    <option value="PATCH">PATCH</option>
+                  </select>
+                </div>
+
+                <div class="input-group">
+                  <label for="requestHeaders">
+                    <span style="margin-right: 6px;">📋</span>
+                    Request Headers (JSON)
+                  </label>
+                  <textarea 
+                    id="requestHeaders" 
+                    placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
+                    rows="3"
+                  ></textarea>
+                </div>
+
+                <div class="input-group">
+                  <label for="requestBody">
+                    <span style="margin-right: 6px;">📦</span>
+                    Request Body (JSON)
+                  </label>
+                  <textarea 
+                    id="requestBody" 
+                    placeholder='{"key": "value"}'
+                    rows="3"
+                  ></textarea>
+                </div>
+
+                <div class="flex-row">
+                  <button class="btn btn-success" onclick="fetchCustomAPI()" style="flex: 1;" id="fetchBtn">
+                    🚀 Fetch Real API Data
+                  </button>
+                  <button class="btn btn-secondary" onclick="clearAPIFields()">
+                    🗑️ Clear
+                  </button>
+                </div>
+
+                <div class="input-group" id="apiStatus" style="display: none;">
+                  <label>API Status</label>
+                  <div id="statusMessage" class="analysis-result">
+                    <!-- Status will appear here -->
+                  </div>
+                </div>
+
+                <div id="apiDataContainer" class="hidden">
+                  <div class="database-view">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                      <h4>📋 Live API Response</h4>
+                      <button class="btn btn-secondary" onclick="exportData()" style="width: auto; padding: 4px 8px; font-size: 11px;">
+                        💾 Export JSON
+                      </button>
+                    </div>
+                    <div id="apiTablesContainer"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="schemaTab" class="tab-content">
+                <div class="empty-state">
+                  🚧 Database schema feature coming soon<br>
+                  <small>Connect to your database to visualize real schema data</small>
+                </div>
+                <button class="btn btn-info" onclick="fetchSchemaData()" style="margin-top: 12px;">
+                  🗃️ Try Schema Load
+                </button>
+                <div id="schemaContainer" class="hidden">
+                  <div class="database-view">
+                    <h4>🏗️ Database Schema</h4>
+                    <div class="schema-container" id="schemaTablesContainer"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Component Generator Section -->
@@ -725,218 +831,6 @@ class SidePanelProvider {
             </div>
           </div>
 
-          <!-- API Data Visualization Section -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection('api-visualization')">
-              📊 Data Visualization
-            </div>
-            <div class="section-content" id="api-visualization">
-              <div class="tabs">
-                <div class="tab active" onclick="switchTab('apiTab')">API Response</div>
-                <div class="tab" onclick="switchTab('schemaTab')">Database Schema</div>
-                <div class="tab" onclick="switchTab('relationsTab')">Data Relations</div>
-              </div>
-
-              <div id="apiTab" class="tab-content active">
-                <div class="input-group">
-                  <label for="apiEndpoint">
-                    <span style="margin-right: 6px;">🌐</span>
-                    API Endpoint URL
-                  </label>
-                  <div class="flex-row">
-                    <input 
-                      type="text" 
-                      id="apiEndpoint" 
-                      placeholder="https://api.example.com/data"
-                    >
-                    <button class="btn btn-info" onclick="testEndpoint()">
-                      🔍 Test
-                    </button>
-                  </div>
-                </div>
-
-                <div class="input-group">
-                  <label for="requestMethod">
-                    <span style="margin-right: 6px;">⚡</span>
-                    HTTP Method
-                  </label>
-                  <select id="requestMethod">
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                    <option value="PUT">PUT</option>
-                    <option value="DELETE">DELETE</option>
-                  </select>
-                </div>
-
-                <div class="input-group">
-                  <label for="requestHeaders">
-                    <span style="margin-right: 6px;">📋</span>
-                    Request Headers (JSON)
-                  </label>
-                  <textarea 
-                    id="requestHeaders" 
-                    placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
-                    rows="3"
-                  ></textarea>
-                </div>
-
-                <div class="input-group">
-                  <label for="requestBody">
-                    <span style="margin-right: 6px;">📦</span>
-                    Request Body (JSON)
-                  </label>
-                  <textarea 
-                    id="requestBody" 
-                    placeholder='{"key": "value"}'
-                    rows="3"
-                  ></textarea>
-                </div>
-
-                <div class="flex-row">
-                  <button class="btn btn-success" onclick="fetchCustomAPI()" style="flex: 1;">
-                    🚀 Fetch API Data
-                  </button>
-                  <button class="btn btn-secondary" onclick="clearAPIFields()">
-                    🗑️ Clear
-                  </button>
-                </div>
-
-                <div class="input-group" id="apiStatus" style="display: none;">
-                  <label>API Status</label>
-                  <div id="statusMessage" class="analysis-result">
-                    <!-- Status will appear here -->
-                  </div>
-                </div>
-
-                <div id="apiDataContainer" class="hidden">
-                  <div class="database-view">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                      <h4>📋 API Response Data</h4>
-                      <button class="btn btn-secondary" onclick="exportData()" style="width: auto; padding: 4px 8px; font-size: 11px;">
-                        💾 Export
-                      </button>
-                    </div>
-                    <div id="apiTablesContainer"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div id="schemaTab" class="tab-content">
-                <button class="btn btn-info" onclick="fetchSchemaData()">
-                  🗃️ Load Schema
-                </button>
-                <div id="schemaContainer" class="hidden">
-                  <div class="database-view">
-                    <h4>🏗️ Database Schema</h4>
-                    <div class="schema-container" id="schemaTablesContainer"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div id="relationsTab" class="tab-content">
-                <div class="database-view">
-                  <h4>🔗 Entity Relationships</h4>
-                  <div class="schema-container">
-                    <!-- Users Table -->
-                    <div class="database-table">
-                      <div class="table-header">
-                        <span class="table-icon">👥</span>
-                        users
-                      </div>
-                      <div class="table-content">
-                        <table class="data-table">
-                          <thead>
-                            <tr>
-                              <th>Field</th>
-                              <th>Type</th>
-                              <th>Key</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td>id <span class="primary-key">PK</span></td>
-                              <td>INT <span class="field-type">AUTO_INCREMENT</span></td>
-                              <td><span class="field-required">●</span></td>
-                            </tr>
-                            <tr>
-                              <td>name</td>
-                              <td>VARCHAR(100)</td>
-                              <td><span class="field-required">●</span></td>
-                            </tr>
-                            <tr>
-                              <td>email</td>
-                              <td>VARCHAR(255)</td>
-                              <td><span class="field-required">●</span></td>
-                            </tr>
-                            <tr>
-                              <td>created_at</td>
-                              <td>TIMESTAMP</td>
-                              <td><span class="field-required">●</span></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div class="relationship-line"></div>
-
-                    <!-- Posts Table -->
-                    <div class="database-table">
-                      <div class="table-header">
-                        <span class="table-icon">📝</span>
-                        posts
-                      </div>
-                      <div class="table-content">
-                        <table class="data-table">
-                          <thead>
-                            <tr>
-                              <th>Field</th>
-                              <th>Type</th>
-                              <th>Key</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td>id <span class="primary-key">PK</span></td>
-                              <td>INT</td>
-                              <td><span class="field-required">●</span></td>
-                            </tr>
-                            <tr>
-                              <td>user_id <span class="foreign-key">FK</span></td>
-                              <td>INT</td>
-                              <td><span class="field-required">●</span></td>
-                            </tr>
-                            <tr>
-                              <td>title</td>
-                              <td>VARCHAR(200)</td>
-                              <td><span class="field-required">●</span></td>
-                            </tr>
-                            <tr>
-                              <td>content</td>
-                              <td>TEXT</td>
-                              <td><span class="field-optional">○</span></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    <div class="table-relations">
-                      <div class="relation-card">
-                        <div class="relation-type">One-to-Many</div>
-                        <div>users → posts</div>
-                      </div>
-                      <div class="relation-card">
-                        <div class="relation-type">Foreign Key</div>
-                        <div>posts.user_id → users.id</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Analysis Results Section -->
           <div class="section">
             <div class="section-header" onclick="toggleSection('analysis-results')">
@@ -955,6 +849,7 @@ class SidePanelProvider {
 
         <script>
           const vscode = acquireVsCodeApi();
+          let currentAPIData = null;
 
           // Collapsible sections functionality
           function toggleSection(sectionId) {
@@ -1129,11 +1024,6 @@ export const \${name} = memo(({ prop1, prop2 }) => {
             }
 
             showAPIStatus(\`Testing \${method} request to: \${endpoint}\`, 'info');
-            
-            // Simulate API test
-            setTimeout(() => {
-              showAPIStatus('✅ Endpoint is reachable', 'success');
-            }, 1000);
           }
 
           function fetchCustomAPI() {
@@ -1147,7 +1037,13 @@ export const \${name} = memo(({ prop1, prop2 }) => {
               return;
             }
 
-            showAPIStatus('🔄 Fetching data from API...', 'info');
+            // Disable button and show loading
+            const fetchBtn = document.getElementById('fetchBtn');
+            fetchBtn.innerHTML = '⏳ Fetching...';
+            fetchBtn.disabled = true;
+            fetchBtn.classList.add('loading');
+
+            showAPIStatus('🔄 Fetching live data from API...', 'info');
 
             let headers = {};
             let body = null;
@@ -1161,6 +1057,7 @@ export const \${name} = memo(({ prop1, prop2 }) => {
               }
             } catch (e) {
               showAPIStatus('Invalid JSON in headers or body', 'error');
+              resetFetchButton();
               return;
             }
 
@@ -1174,12 +1071,20 @@ export const \${name} = memo(({ prop1, prop2 }) => {
             });
           }
 
+          function resetFetchButton() {
+            const fetchBtn = document.getElementById('fetchBtn');
+            fetchBtn.innerHTML = '🚀 Fetch Real API Data';
+            fetchBtn.disabled = false;
+            fetchBtn.classList.remove('loading');
+          }
+
           function clearAPIFields() {
             document.getElementById('apiEndpoint').value = '';
             document.getElementById('requestHeaders').value = '';
             document.getElementById('requestBody').value = '';
             document.getElementById('apiStatus').style.display = 'none';
             document.getElementById('apiDataContainer').classList.add('hidden');
+            currentAPIData = null;
             showAPIStatus('Fields cleared', 'success');
             setTimeout(() => {
               document.getElementById('apiStatus').style.display = 'none';
@@ -1207,29 +1112,36 @@ export const \${name} = memo(({ prop1, prop2 }) => {
           }
 
           function exportData() {
-            const tablesContainer = document.getElementById('apiTablesContainer');
-            const data = tablesContainer.innerText;
+            if (!currentAPIData) {
+              showAPIStatus('No data to export', 'error');
+              return;
+            }
+            
+            const dataStr = JSON.stringify(currentAPIData.fullResponse, null, 2);
             
             vscode.postMessage({
               type: 'exportData',
-              data: data
+              data: dataStr
             });
             
-            showAPIStatus('Data exported to clipboard', 'success');
+            showAPIStatus('JSON data copied to clipboard', 'success');
           }
 
           function renderAPIData(data) {
+            currentAPIData = data;
             const container = document.getElementById('apiDataContainer');
             const tablesContainer = document.getElementById('apiTablesContainer');
             
             container.classList.remove('hidden');
             
             // Create tables based on the actual API response
+            const responseTimeText = data.responseTime ? \`<span class="response-time">(\${data.responseTime}ms)</span>\` : '';
+            
             tablesContainer.innerHTML = \`
               <div class="database-table">
                 <div class="table-header">
                   <span class="table-icon">📊</span>
-                  API Response Summary
+                  API Response Summary \${responseTimeText}
                 </div>
                 <div class="table-content">
                   <table class="data-table">
@@ -1267,10 +1179,17 @@ export const \${name} = memo(({ prop1, prop2 }) => {
                         </td>
                       </tr>
                       <tr>
-                        <td>Cache Status</td>
+                        <td>Content Type</td>
+                        <td>\${data.contentType || 'N/A'}</td>
+                        <td><span style="color: var(--info)">●</span> Info</td>
+                      </tr>
+                      \${data.cacheStatus && data.cacheStatus !== 'unknown' ? \`
+                      <tr>
+                        <td>Cache</td>
                         <td>\${data.cacheStatus}</td>
                         <td><span style="color: var(--info)">●</span> Info</td>
                       </tr>
+                      \` : ''}
                     </tbody>
                   </table>
                 </div>
@@ -1286,20 +1205,37 @@ export const \${name} = memo(({ prop1, prop2 }) => {
                   <table class="data-table">
                     <thead>
                       <tr>
-                        \${Object.keys(data.users[0]).map(key => \`<th>\${key}</th>\`).join('')}
+                        \${Object.keys(data.users[0]).map(key => \`
+                          <th>\${key}</th>
+                        \`).join('')}
                       </tr>
                     </thead>
                     <tbody>
                       \${data.users.map(user => \`
                         <tr>
-                          \${Object.values(user).map(value => \`<td>\${value}</td>\`).join('')}
+                          \${Object.values(user).map(value => \`
+                            <td>\${typeof value === 'object' ? JSON.stringify(value) : value}</td>
+                          \`).join('')}
                         </tr>
                       \`).join('')}
                     </tbody>
                   </table>
                 </div>
               </div>
-              \` : ''}
+              \` : \`
+              <div class="database-table" style="margin-top: 16px;">
+                <div class="table-header">
+                  <span class="table-icon">📄</span>
+                  Response Data
+                </div>
+                <div class="table-content">
+                  <div class="empty-state">
+                    No structured data found in response<br>
+                    <small>Check the raw response below</small>
+                  </div>
+                </div>
+              </div>
+              \`}
 
               <div class="database-table" style="margin-top: 16px;">
                 <div class="table-header">
@@ -1308,7 +1244,7 @@ export const \${name} = memo(({ prop1, prop2 }) => {
                 </div>
                 <div class="table-content">
                   <div class="code-preview">
-\${JSON.stringify(data.fullResponse, null, 2).substring(0, 1000)}\${JSON.stringify(data.fullResponse, null, 2).length > 1000 ? '...' : ''}
+\${typeof data.fullResponse === 'string' ? data.fullResponse.substring(0, 2000) : JSON.stringify(data.fullResponse, null, 2).substring(0, 2000)}\${(typeof data.fullResponse === 'string' ? data.fullResponse.length : JSON.stringify(data.fullResponse).length) > 2000 ? '...' : ''}
                   </div>
                 </div>
               </div>
@@ -1320,6 +1256,15 @@ export const \${name} = memo(({ prop1, prop2 }) => {
             const tablesContainer = document.getElementById('schemaTablesContainer');
             
             container.classList.remove('hidden');
+            
+            if (!data.tables || data.tables.length === 0) {
+              tablesContainer.innerHTML = \`
+                <div class="empty-state">
+                  \${data.message || 'No schema data available'}
+                </div>
+              \`;
+              return;
+            }
             
             tablesContainer.innerHTML = data.tables.map(table => \`
               <div class="database-table">
@@ -1364,10 +1309,12 @@ export const \${name} = memo(({ prop1, prop2 }) => {
             switch (message.type) {
               case 'apiDataReceived':
                 renderAPIData(message.data);
-                showAPIStatus('✅ Data fetched successfully', 'success');
+                showAPIStatus(\`✅ Data fetched successfully (\${message.data.responseTime}ms)\`, 'success');
+                resetFetchButton();
                 break;
               case 'apiError':
                 showAPIStatus(\`❌ API Error: \${message.error}\`, 'error');
+                resetFetchButton();
                 break;
               case 'schemaDataReceived':
                 renderSchemaData(message.data);
@@ -1375,8 +1322,8 @@ export const \${name} = memo(({ prop1, prop2 }) => {
             }
           });
 
-          // Initialize
-          document.getElementById('componentName').focus();
+          // Initialize with API section open and focused
+          document.getElementById('apiEndpoint').focus();
         </script>
       </body>
       </html>
@@ -1386,45 +1333,18 @@ export const \${name} = memo(({ prop1, prop2 }) => {
   _insertCode(code) {
     const editor = vscode.window.activeTextEditor;
     if (editor) {
-      editor.edit(editBuilder => {
+      editor.edit((editBuilder) => {
         editBuilder.insert(editor.selection.active, code);
       });
     } else {
-      vscode.window.showWarningMessage('No active editor found to insert code');
+      vscode.window.showWarningMessage("No active editor found to insert code");
     }
   }
 
   async _analyzePropDrilling() {
-    vscode.window.showInformationMessage('Analyzing component tree for prop drilling...');
-  }
-
-  async _simulateSchemaData() {
-    return {
-      tables: [
-        {
-          name: 'users',
-          icon: '👥',
-          fields: [
-            { name: 'id', type: 'INT', length: 11, required: true, unique: true, isPrimary: true },
-            { name: 'username', type: 'VARCHAR', length: 50, required: true, unique: true },
-            { name: 'email', type: 'VARCHAR', length: 255, required: true, unique: true },
-            { name: 'created_at', type: 'TIMESTAMP', required: true },
-            { name: 'updated_at', type: 'TIMESTAMP', required: false }
-          ]
-        },
-        {
-          name: 'posts',
-          icon: '📝',
-          fields: [
-            { name: 'id', type: 'INT', length: 11, required: true, unique: true, isPrimary: true },
-            { name: 'user_id', type: 'INT', length: 11, required: true, isForeign: true },
-            { name: 'title', type: 'VARCHAR', length: 200, required: true },
-            { name: 'content', type: 'TEXT', required: false },
-            { name: 'published', type: 'BOOLEAN', required: true }
-          ]
-        }
-      ]
-    };
+    vscode.window.showInformationMessage(
+      "Analyzing component tree for prop drilling..."
+    );
   }
 }
 
