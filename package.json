@@ -2,6 +2,7 @@
   "name": "tsed-s-react-dev-kit",
   "displayName": "Tsed's React Dev Kit",
   "description": "extension for manageing/dealing with common headaches during web development with react",
+  "icon": "icon.png",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.105.0"

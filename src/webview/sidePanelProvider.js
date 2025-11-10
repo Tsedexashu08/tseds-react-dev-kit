@@ -1,5 +1,6 @@
 const vscode = require("vscode");
 const path = require("path");
+const fs = require("fs");
 const https = require("https");
 const http = require("http");
 
@@ -21,7 +22,7 @@ class SidePanelProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     // Handle messages from webview
-    webviewView.webview.onDidReceiveMessage((data) => {
+    webviewView.webview.onDidReceiveMessage(async (data) => {
       switch (data.type) {
         case "showInfo":
           vscode.window.showInformationMessage(
@@ -35,7 +36,10 @@ class SidePanelProvider {
           vscode.commands.executeCommand(data.command);
           break;
         case "analyzeProps":
-          this._analyzePropDrilling();
+          await this._analyzePropDrilling(webviewView);
+          break;
+        case "analyzePerformance":
+          await this._analyzePerformance(webviewView);
           break;
         case "fetchSchemaData":
           this._fetchSchemaData().then((schemaData) => {
@@ -71,6 +75,359 @@ class SidePanelProvider {
           break;
       }
     });
+  }
+
+  async _analyzePropDrilling(webviewView) {
+    try {
+      vscode.window.showInformationMessage("🔍 Analyzing prop drilling...");
+      
+      const analysis = await this._scanForPropDrilling();
+      
+      webviewView.webview.postMessage({
+        type: 'propDrillingAnalysis',
+        data: analysis
+      });
+
+    } catch (error) {
+      vscode.window.showErrorMessage(`Prop drilling analysis failed: ${error.message}`);
+      
+      webviewView.webview.postMessage({
+        type: 'propDrillingAnalysis',
+        data: {
+          error: error.message,
+          components: [],
+          suggestions: []
+        }
+      });
+    }
+  }
+
+  async _analyzePerformance(webviewView) {
+    try {
+      vscode.window.showInformationMessage("🚀 Analyzing performance...");
+      
+      const analysis = await this._scanForPerformanceIssues();
+      
+      webviewView.webview.postMessage({
+        type: 'performanceAnalysis',
+        data: analysis
+      });
+
+    } catch (error) {
+      vscode.window.showErrorMessage(`Performance analysis failed: ${error.message}`);
+      
+      webviewView.webview.postMessage({
+        type: 'performanceAnalysis',
+        data: {
+          error: error.message,
+          issues: [],
+          suggestions: []
+        }
+      });
+    }
+  }
+
+  async _scanForPropDrilling() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      throw new Error("No workspace folder open");
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+    const components = await this._findReactComponents(workspacePath);
+    const propDrillingIssues = [];
+
+    for (const component of components) {
+      const issues = await this._analyzeComponentForPropDrilling(component.filePath, component.name);
+      if (issues.length > 0) {
+        propDrillingIssues.push({
+          component: component.name,
+          file: path.relative(workspacePath, component.filePath),
+          issues: issues,
+          depth: Math.max(...issues.map(issue => issue.depth))
+        });
+      }
+    }
+
+    // Sort by severity (depth of prop drilling)
+    propDrillingIssues.sort((a, b) => b.depth - a.depth);
+
+    return {
+      components: propDrillingIssues,
+      suggestions: this._generatePropDrillingSuggestions(propDrillingIssues),
+      summary: {
+        totalComponents: components.length,
+        componentsWithIssues: propDrillingIssues.length,
+        maxPropDepth: propDrillingIssues.length > 0 ? Math.max(...propDrillingIssues.map(c => c.depth)) : 0
+      }
+    };
+  }
+
+  async _scanForPerformanceIssues() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      throw new Error("No workspace folder open");
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+    const components = await this._findReactComponents(workspacePath);
+    const performanceIssues = [];
+
+    for (const component of components) {
+      const issues = await this._analyzeComponentForPerformance(component.filePath);
+      if (issues.length > 0) {
+        performanceIssues.push({
+          component: component.name,
+          file: path.relative(workspacePath, component.filePath),
+          issues: issues
+        });
+      }
+    }
+
+    return {
+      issues: performanceIssues,
+      suggestions: this._generatePerformanceSuggestions(performanceIssues),
+      summary: {
+        totalComponents: components.length,
+        componentsWithIssues: performanceIssues.length,
+        totalIssues: performanceIssues.reduce((sum, comp) => sum + comp.issues.length, 0)
+      }
+    };
+  }
+
+  async _findReactComponents(workspacePath) {
+    const components = [];
+    const jsExtensions = ['.js', '.jsx', '.ts', '.tsx'];
+    
+    async function scanDirectory(dir) {
+      try {
+        const files = await fs.promises.readdir(dir, { withFileTypes: true });
+        
+        for (const file of files) {
+          const fullPath = path.join(dir, file.name);
+          
+          if (file.isDirectory()) {
+            // Skip node_modules and other common directories
+            if (!['node_modules', '.git', 'dist', 'build'].includes(file.name)) {
+              await scanDirectory(fullPath);
+            }
+          } else if (jsExtensions.includes(path.extname(file.name).toLowerCase())) {
+            const content = await fs.promises.readFile(fullPath, 'utf8');
+            
+            // Simple regex to find React components
+            const componentRegex = /(?:export\s+)?(?:function|const|class)\s+([A-Z][A-Za-z0-9_]*)\s*(?:\(|\{|=)/g;
+            let match;
+            
+            while ((match = componentRegex.exec(content)) !== null) {
+              components.push({
+                name: match[1],
+                filePath: fullPath,
+                content: content
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error scanning directory ${dir}:`, error);
+      }
+    }
+    
+    await scanDirectory(workspacePath);
+    return components;
+  }
+
+  async _analyzeComponentForPropDrilling(filePath, componentName) {
+    try {
+      const content = await fs.promises.readFile(filePath, 'utf8');
+      const issues = [];
+      
+      // Look for props being passed down through multiple components
+      const propUsageRegex = /this\.props\.([A-Za-z0-9_]+)|props\.([A-Za-z0-9_]+)|([A-Za-z0-9_]+)\s*=\s*props\.([A-Za-z0-9_]+)/g;
+      const propMatches = [...content.matchAll(propUsageRegex)];
+      
+      // Look for component usage with props
+      const componentUsageRegex = /<([A-Z][A-Za-z0-9_]*)\s+([^>]*)>/g;
+      const componentMatches = [...content.matchAll(componentUsageRegex)];
+      
+      // Analyze prop usage patterns
+      const propUsage = new Map();
+      
+      for (const match of propMatches) {
+        const propName = match[1] || match[2] || match[4];
+        if (propName && !propUsage.has(propName)) {
+          propUsage.set(propName, {
+            name: propName,
+            usageCount: 1,
+            passedToChildren: false
+          });
+        }
+      }
+      
+      // Check if props are passed to children
+      for (const match of componentMatches) {
+        const propsString = match[2];
+        if (propsString.includes('...props') || propsString.includes('{...props}')) {
+          issues.push({
+            type: 'propsSpread',
+            message: `Props are spread to child component ${match[1]}`,
+            severity: 'medium',
+            depth: 2
+          });
+        }
+        
+        for (const [propName] of propUsage) {
+          if (propsString.includes(propName)) {
+            const prop = propUsage.get(propName);
+            prop.passedToChildren = true;
+            issues.push({
+              type: 'propPassing',
+              prop: propName,
+              message: `Prop "${propName}" is passed to child component ${match[1]}`,
+              severity: 'low',
+              depth: 1
+            });
+          }
+        }
+      }
+      
+      // Calculate prop drilling depth based on usage patterns
+      if (propUsage.size > 3) { // Arbitrary threshold for demonstration
+        issues.push({
+          type: 'multipleProps',
+          message: `Component uses ${propUsage.size} props - consider context or composition`,
+          severity: 'high',
+          depth: propUsage.size
+        });
+      }
+      
+      return issues;
+      
+    } catch (error) {
+      console.error(`Error analyzing component ${componentName}:`, error);
+      return [];
+    }
+  }
+
+  async _analyzeComponentForPerformance(filePath) {
+    try {
+      const content = await fs.promises.readFile(filePath, 'utf8');
+      const issues = [];
+      
+      // Check for missing keys in lists
+      const listRenderRegex = /\.map\s*\(\s*\(\s*(\w+)\s*\)\s*=>/g;
+      const listMatches = [...content.matchAll(listRenderRegex)];
+      
+      for (const match of listMatches) {
+        const itemVar = match[1];
+        const keyCheckRegex = new RegExp(`key\\s*=\\s*\\{[^}]*\\b${itemVar}\\.`);
+        
+        if (!keyCheckRegex.test(content)) {
+          issues.push({
+            type: 'missingKey',
+            message: `List rendering may be missing key prop for ${itemVar}`,
+            severity: 'high',
+            fix: `Add key={${itemVar}.id} or similar unique identifier`
+          });
+        }
+      }
+      
+      // Check for inline functions in props
+      const inlineFunctionRegex = /onClick\s*=\s*{\(\)\s*=>|onChange\s*=\s*{\(\)\s*=>|onSubmit\s*=\s*{\(\)\s*=>/g;
+      if (inlineFunctionRegex.test(content)) {
+        issues.push({
+          type: 'inlineFunction',
+          message: 'Inline functions in props may cause unnecessary re-renders',
+          severity: 'medium',
+          fix: 'Extract functions outside render or use useCallback'
+        });
+      }
+      
+      // Check for large components that could be split
+      const lineCount = content.split('\n').length;
+      if (lineCount > 150) {
+        issues.push({
+          type: 'largeComponent',
+          message: `Component is large (${lineCount} lines) - consider splitting into smaller components`,
+          severity: 'medium',
+          fix: 'Extract logical sections into separate components'
+        });
+      }
+      
+      // Check for missing React.memo on likely pure components
+      const pureComponentRegex = /const\s+([A-Z][A-Za-z0-9_]*)\s*=\s*\({\s*[^}]*\s*}\)\s*=>/;
+      if (pureComponentRegex.test(content) && !content.includes('React.memo') && !content.includes('memo(')) {
+        issues.push({
+          type: 'missingMemo',
+          message: 'Pure component could be wrapped with React.memo',
+          severity: 'low',
+          fix: 'Wrap component with React.memo to prevent unnecessary re-renders'
+        });
+      }
+      
+      return issues;
+      
+    } catch (error) {
+      console.error(`Error analyzing performance for ${filePath}:`, error);
+      return [];
+    }
+  }
+
+  _generatePropDrillingSuggestions(issues) {
+    const suggestions = [];
+    
+    if (issues.length === 0) {
+      return [{ type: 'success', message: 'No significant prop drilling detected!' }];
+    }
+    
+    const deepDrilling = issues.filter(issue => issue.depth >= 3);
+    if (deepDrilling.length > 0) {
+      suggestions.push({
+        type: 'high',
+        message: `Consider using React Context for ${deepDrilling.length} components with deep prop drilling`
+      });
+    }
+    
+    const componentComposition = issues.filter(issue => 
+      issue.issues.some(i => i.type === 'propsSpread')
+    );
+    if (componentComposition.length > 0) {
+      suggestions.push({
+        type: 'medium',
+        message: `Try component composition instead of prop spreading for ${componentComposition.length} components`
+      });
+    }
+    
+    return suggestions;
+  }
+
+  _generatePerformanceSuggestions(issues) {
+    const suggestions = [];
+    
+    if (issues.length === 0) {
+      return [{ type: 'success', message: 'No major performance issues detected!' }];
+    }
+    
+    const missingKeys = issues.flatMap(comp => 
+      comp.issues.filter(issue => issue.type === 'missingKey')
+    );
+    if (missingKeys.length > 0) {
+      suggestions.push({
+        type: 'high',
+        message: `Add key props to ${missingKeys.length} list renderers`
+      });
+    }
+    
+    const inlineFunctions = issues.flatMap(comp => 
+      comp.issues.filter(issue => issue.type === 'inlineFunction')
+    );
+    if (inlineFunctions.length > 0) {
+      suggestions.push({
+        type: 'medium',
+        message: `Extract ${inlineFunctions.length} inline functions to prevent re-renders`
+      });
+    }
+    
+    return suggestions;
   }
 
   async _fetchRealAPI(endpoint, method = "GET", headers = {}, body = null) {
@@ -261,7 +618,6 @@ class SidePanelProvider {
   }
 
   _getHtmlForWebview(webview) {
-    // HTML remains largely the same but with improved UI logic
     return `
       <!DOCTYPE html>
       <html>
@@ -653,13 +1009,93 @@ class SidePanelProvider {
             color: var(--text-secondary);
             margin-left: 8px;
           }
+
+          .analysis-details {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            border-left: 4px solid var(--warning);
+          }
+
+          .issue-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            border-left: 3px solid var(--warning);
+          }
+
+          .issue-item.high {
+            border-left-color: var(--error);
+          }
+
+          .issue-item.medium {
+            border-left-color: var(--warning);
+          }
+
+          .issue-item.low {
+            border-left-color: var(--info);
+          }
+
+          .suggestion-item {
+            padding: 8px;
+            margin: 4px 0;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            border-left: 3px solid var(--success);
+          }
+
+          .component-issue {
+            margin-bottom: 12px;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+          }
+
+          .component-name {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 8px;
+          }
+
+          .file-path {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+          }
+
+          .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+          }
+
+          .stat-item {
+            text-align: center;
+            padding: 8px;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+          }
+
+          .stat-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--accent);
+          }
+
+          .stat-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+          }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>⚛️ Tsed's React Dev Tools</h1>
-            <div class="subtitle">Professional React Development Assistant</div>
+            <div class="subtitle">A React Development Assistant for my fellow nerds</div>
           </div>
 
           <!-- API Data Visualization Section - Moved to top as primary feature -->
@@ -824,8 +1260,8 @@ class SidePanelProvider {
                 <button class="btn btn-warning" onclick="analyzePropDrilling()">
                   🔍 Detect Prop Drilling
                 </button>
-                <button class="btn" onclick="optimizePerformance()">
-                  🚀 Performance Suggestions
+                <button class="btn btn-info" onclick="analyzePerformance()">
+                  ⚡ Performance Analysis
                 </button>
               </div>
             </div>
@@ -841,7 +1277,7 @@ class SidePanelProvider {
                 Run "Detect Prop Drilling" to analyze your component tree
               </div>
               <div id="performanceResult" class="analysis-result">
-                Performance suggestions will appear here
+                Run "Performance Analysis" to get optimization suggestions
               </div>
             </div>
           </div>
@@ -989,20 +1425,23 @@ export const \${name} = memo(({ prop1, prop2 }) => {
             });
             
             document.getElementById('propDrillingResult').innerHTML = \`
-              <strong>🔍 Prop Drilling Analysis</strong><br>
-              Found 3 components with potential prop drilling<br>
-              ✅ 2 components can be optimized with Context API<br>
-              💡 Consider using React Context or Composition
+              <div class="analysis-result info">
+                <strong>🔍 Analyzing Prop Drilling...</strong><br>
+                Scanning your React components for prop passing patterns...
+              </div>
             \`;
           }
 
-          function optimizePerformance() {
+          function analyzePerformance() {
+            vscode.postMessage({
+              type: 'analyzePerformance'
+            });
+            
             document.getElementById('performanceResult').innerHTML = \`
-              <strong>🚀 Performance Suggestions</strong><br>
-              ✅ Use React.memo for expensive components<br>
-              🔄 Implement useCallback for event handlers<br>
-              📦 Consider code splitting for large bundles<br>
-              🎯 Use the Profiler in React DevTools
+              <div class="analysis-result info">
+                <strong>⚡ Analyzing Performance...</strong><br>
+                Checking for common React performance issues...
+              </div>
             \`;
           }
 
@@ -1303,6 +1742,147 @@ export const \${name} = memo(({ prop1, prop2 }) => {
             \`).join('');
           }
 
+          function renderPropDrillingAnalysis(data) {
+            const container = document.getElementById('propDrillingResult');
+            
+            if (data.error) {
+              container.innerHTML = \`
+                <div class="analysis-result error">
+                  <strong>❌ Analysis Failed</strong><br>
+                  \${data.error}
+                </div>
+              \`;
+              return;
+            }
+
+            let html = \`
+              <div class="analysis-result \${data.components.length > 0 ? 'warning' : 'success'}">
+                <strong>🔍 Prop Drilling Analysis Complete</strong>
+                <div class="summary-stats">
+                  <div class="stat-item">
+                    <div class="stat-number">\${data.summary.totalComponents}</div>
+                    <div class="stat-label">Total Components</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">\${data.summary.componentsWithIssues}</div>
+                    <div class="stat-label">Need Attention</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">\${data.summary.maxPropDepth}</div>
+                    <div class="stat-label">Max Prop Depth</div>
+                  </div>
+                </div>
+            \`;
+
+            if (data.components.length > 0) {
+              html += \`
+                <div class="analysis-details">
+                  <h4>Components with Prop Drilling:</h4>
+                  \${data.components.map(component => \`
+                    <div class="component-issue">
+                      <div class="component-name">\${component.component}</div>
+                      <div class="file-path">\${component.file}</div>
+                      <div class="issues-list">
+                        \${component.issues.map(issue => \`
+                          <div class="issue-item \${issue.severity}">
+                            <strong>\${issue.type}:</strong> \${issue.message}
+                          </div>
+                        \`).join('')}
+                      </div>
+                    </div>
+                  \`).join('')}
+                </div>
+              \`;
+            }
+
+            if (data.suggestions.length > 0) {
+              html += \`
+                <div class="analysis-details">
+                  <h4>Suggestions:</h4>
+                  \${data.suggestions.map(suggestion => \`
+                    <div class="suggestion-item">
+                      <strong>\${suggestion.type.toUpperCase()}:</strong> \${suggestion.message}
+                    </div>
+                  \`).join('')}
+                </div>
+              \`;
+            }
+
+            html += \`</div>\`;
+            container.innerHTML = html;
+          }
+
+          function renderPerformanceAnalysis(data) {
+            const container = document.getElementById('performanceResult');
+            
+            if (data.error) {
+              container.innerHTML = \`
+                <div class="analysis-result error">
+                  <strong>❌ Analysis Failed</strong><br>
+                  \${data.error}
+                </div>
+              \`;
+              return;
+            }
+
+            let html = \`
+              <div class="analysis-result \${data.issues.length > 0 ? 'warning' : 'success'}">
+                <strong>⚡ Performance Analysis Complete</strong>
+                <div class="summary-stats">
+                  <div class="stat-item">
+                    <div class="stat-number">\${data.summary.totalComponents}</div>
+                    <div class="stat-label">Total Components</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">\${data.summary.componentsWithIssues}</div>
+                    <div class="stat-label">Need Optimization</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">\${data.summary.totalIssues}</div>
+                    <div class="stat-label">Issues Found</div>
+                  </div>
+                </div>
+            \`;
+
+            if (data.issues.length > 0) {
+              html += \`
+                <div class="analysis-details">
+                  <h4>Performance Issues:</h4>
+                  \${data.issues.map(component => \`
+                    <div class="component-issue">
+                      <div class="component-name">\${component.component}</div>
+                      <div class="file-path">\${component.file}</div>
+                      <div class="issues-list">
+                        \${component.issues.map(issue => \`
+                          <div class="issue-item \${issue.severity}">
+                            <strong>\${issue.type}:</strong> \${issue.message}
+                            \${issue.fix ? \`<br><small>💡 Fix: \${issue.fix}</small>\` : ''}
+                          </div>
+                        \`).join('')}
+                      </div>
+                    </div>
+                  \`).join('')}
+                </div>
+              \`;
+            }
+
+            if (data.suggestions.length > 0) {
+              html += \`
+                <div class="analysis-details">
+                  <h4>Optimization Suggestions:</h4>
+                  \${data.suggestions.map(suggestion => \`
+                    <div class="suggestion-item">
+                      <strong>\${suggestion.type.toUpperCase()}:</strong> \${suggestion.message}
+                    </div>
+                  \`).join('')}
+                </div>
+              \`;
+            }
+
+            html += \`</div>\`;
+            container.innerHTML = html;
+          }
+
           // Handle messages from extension
           window.addEventListener('message', event => {
             const message = event.data;
@@ -1318,6 +1898,12 @@ export const \${name} = memo(({ prop1, prop2 }) => {
                 break;
               case 'schemaDataReceived':
                 renderSchemaData(message.data);
+                break;
+              case 'propDrillingAnalysis':
+                renderPropDrillingAnalysis(message.data);
+                break;
+              case 'performanceAnalysis':
+                renderPerformanceAnalysis(message.data);
                 break;
             }
           });
@@ -1339,12 +1925,6 @@ export const \${name} = memo(({ prop1, prop2 }) => {
     } else {
       vscode.window.showWarningMessage("No active editor found to insert code");
     }
-  }
-
-  async _analyzePropDrilling() {
-    vscode.window.showInformationMessage(
-      "Analyzing component tree for prop drilling..."
-    );
   }
 }
 
