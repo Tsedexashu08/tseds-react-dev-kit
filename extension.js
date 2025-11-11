@@ -14,13 +14,30 @@ function activate(context) {
     provider
   );
 
-  // The original hello world command(for testing,i'll take out later...)
-  const disposable = vscode.commands.registerCommand(
+ // The original hello world command (for testing, I'll take out later...)
+const disposable = vscode.commands.registerCommand(
     "tsed-s-react-dev-kit.helloWorld",
     function () {
-      vscode.window.showInformationMessage("Tseds React Dev Kit says Hello!");
+        const url = 'https://react.dev';
+
+        // 1. Execute the Simple Browser command first. 
+        // We must WAIT for this Promise to resolve to ensure the browser is open and active.
+        vscode.commands.executeCommand('simpleBrowser.show', url)
+            .then(() => {
+                // 2. ONLY THEN, execute the command to move the active editor (the Simple Browser)
+                // to the next group, creating the side-by-side view.
+                return vscode.commands.executeCommand('workbench.action.moveEditorToNextGroup');
+            })
+            .then(() => {
+                // Optional: Show a message upon successful completion
+                vscode.window.showInformationMessage('React documentation opened in split view!');
+            })
+            // .catch(error => {
+            //     // Handle any error during the sequence
+            //     vscode.window.showErrorMessage(`Failed to open browser: ${error}`);
+            // });
     }
-  );
+);
 
   // Command to focus on the side panel
   const openPanelCommand = vscode.commands.registerCommand(

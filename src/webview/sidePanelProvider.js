@@ -73,10 +73,37 @@ class SidePanelProvider {
           vscode.env.clipboard.writeText(data.data);
           vscode.window.showInformationMessage("Data copied to clipboard!");
           break;
+        case "OpenDocs":
+         vscode.commands.executeCommand('tsed-s-react-dev-kit.helloWorld')        
+    break;
       }
     });
   }
+ 
+ async _executeSplitBrowserCommand(url) {
+    if (!url) {
+        vscode.window.showErrorMessage('No URL provided to open documentation.');
+        return;
+    }
+    
+    try {
+        // 1. Execute the Simple Browser command to open the URL.
+        await vscode.commands.executeCommand('simpleBrowser.show', url);
+        
+        // 2. Wait a moment, then move the active editor (the browser) to the next group
+        // to achieve the split view. A small delay can help ensure the first command completes.
+        // It's often not strictly necessary in modern VS Code, but can prevent race conditions.
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        await vscode.commands.executeCommand('workbench.action.moveEditorToNextGroup');
 
+        vscode.window.showInformationMessage(`React documentation for ${url} opened in split view.`);
+    } catch (error) {
+        // Simple Browser command might not be available if user uninstalled the extension, 
+        // but it's built-in now. This catch handles general execution failure.
+        vscode.window.showErrorMessage(`Failed to open documentation: ${error.message}`);
+    }
+}
   async _analyzePropDrilling(webviewView) {
     try {
       vscode.window.showInformationMessage("🔍 Analyzing prop drilling...");
@@ -235,7 +262,27 @@ class SidePanelProvider {
     await scanDirectory(workspacePath);
     return components;
   }
-
+ //for displpaying the docs...
+  //  async showDocs() {
+  //        const url = 'https://react.dev/reference/react/useState';
+ 
+  //        // 1. Execute the Simple Browser command first. 
+  //        // We must WAIT for this Promise to resolve to ensure the browser is open and active.
+  //        vscode.commands.executeCommand('simpleBrowser.show', url)
+  //            .then(() => {
+  //                // 2. ONLY THEN, execute the command to move the active editor (the Simple Browser)
+  //                // to the next group, creating the side-by-side view.
+  //                return vscode.commands.executeCommand('workbench.action.moveEditorToNextGroup');
+  //            })
+  //            .then(() => {
+  //                // Optional: Show a message upon successful completion
+  //                vscode.window.showInformationMessage('React documentation opened in split view!');
+  //            })
+  //            // .catch(error => {
+  //            //     // Handle any error during the sequence
+  //            //     vscode.window.showErrorMessage(`Failed to open browser: ${error}`);
+  //            // });
+  //    }
   async _analyzeComponentForPropDrilling(filePath, componentName) {
     try {
       const content = await fs.promises.readFile(filePath, 'utf8');
@@ -1045,7 +1092,11 @@ class SidePanelProvider {
             border-radius: 4px;
             border-left: 3px solid var(--success);
           }
-
+           #icon{
+            background-color: #0000; /* This is the key addition */
+            border-radius: 25px;
+          
+           }
           .component-issue {
             margin-bottom: 12px;
             padding: 8px;
@@ -1094,11 +1145,16 @@ class SidePanelProvider {
       <body>
         <div class="container">
           <div class="header">
-            <h1>⚛️ Tsed's React Dev Tools</h1>
+            <h1> <img src="https://github.com/Tsedexashu08/Power-Apps-Pngs/blob/main/lg.png?raw=true" alt="Icon" id="icon" width="30" hieght="30" style="vertical-align: middle;padding:0; margin-right: 4px;"/>
+                 Tsed's React Dev Tools</h1>
             <div class="subtitle">A React Development Assistant for my fellow nerds</div>
           </div>
 
-          <!-- API Data Visualization Section - Moved to top as primary feature -->
+          <div class="section">
+  <div class="section-header" style="margin-bottom:12px" onclick="showDocs()">
+    <img src="https://cdn.worldvectorlogo.com/logos/react-1.svg" alt="Icon" width="20" hieght="30" style="vertical-align: middle; margin-right: 8px;">
+    Open Official Documentation
+  </div>          <!-- API Data Visualization Section - Moved to top as primary feature -->
           <div class="section">
             <div class="section-header" onclick="toggleSection('api-visualization')">
               📊 API Data Explorer
@@ -1106,7 +1162,6 @@ class SidePanelProvider {
             <div class="section-content" id="api-visualization">
               <div class="tabs">
                 <div class="tab active" onclick="switchTab('apiTab')">🌐 API Request</div>
-                <div class="tab" onclick="switchTab('schemaTab')">🗃️ Schema (Coming Soon)</div>
               </div>
 
               <div id="apiTab" class="tab-content active">
@@ -1285,6 +1340,15 @@ class SidePanelProvider {
 
         <script>
           const vscode = acquireVsCodeApi();
+  
+        function showDocs() {
+        const url = 'https://react.dev/reference/react/useState'; 
+
+        // Posting the message back to the extension host 
+          vscode.postMessage({
+            type: 'OpenDocs'
+        });
+    }
           let currentAPIData = null;
 
           // Collapsible sections functionality
@@ -1295,7 +1359,7 @@ class SidePanelProvider {
             content.classList.toggle('collapsed');
             header.classList.toggle('collapsed');
           }
-
+           
           function switchTab(tabName) {
             // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(tab => {
