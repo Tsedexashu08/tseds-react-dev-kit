@@ -31,6 +31,7 @@
     "views": {
       "explorer": [
         {
+          "icon": "icon.png",
           "id": "tsedSidePanel",
           "name": "Tsed's React Dev Tools",
           "type": "webview"
