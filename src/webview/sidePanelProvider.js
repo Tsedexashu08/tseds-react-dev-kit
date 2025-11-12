@@ -74,57 +74,66 @@ class SidePanelProvider {
           vscode.window.showInformationMessage("Data copied to clipboard!");
           break;
         case "OpenDocs":
-         vscode.commands.executeCommand('tsed-s-react-dev-kit.helloWorld')        
-    break;
+          vscode.commands.executeCommand("tsed-s-react-dev-kit.helloWorld");
+          break;
+        case "showPreview":
+          vscode.commands.executeCommand("tsed-s-react-dev-kit.OpenComponentPreview");
+          break;
       }
     });
   }
- 
- async _executeSplitBrowserCommand(url) {
-    if (!url) {
-        vscode.window.showErrorMessage('No URL provided to open documentation.');
-        return;
-    }
-    
-    try {
-        // 1. Execute the Simple Browser command to open the URL.
-        await vscode.commands.executeCommand('simpleBrowser.show', url);
-        
-        // 2. Wait a moment, then move the active editor (the browser) to the next group
-        // to achieve the split view. A small delay can help ensure the first command completes.
-        // It's often not strictly necessary in modern VS Code, but can prevent race conditions.
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        await vscode.commands.executeCommand('workbench.action.moveEditorToNextGroup');
 
-        vscode.window.showInformationMessage(`React documentation for ${url} opened in split view.`);
-    } catch (error) {
-        // Simple Browser command might not be available if user uninstalled the extension, 
-        // but it's built-in now. This catch handles general execution failure.
-        vscode.window.showErrorMessage(`Failed to open documentation: ${error.message}`);
+  async _executeSplitBrowserCommand(url) {
+    if (!url) {
+      vscode.window.showErrorMessage("No URL provided to open documentation.");
+      return;
     }
-}
+
+    try {
+      // 1. Execute the Simple Browser command to open the URL.
+      await vscode.commands.executeCommand("simpleBrowser.show", url);
+
+     
+      // to achieve the split view( Adding a small delay to help ensure the first command completes....)
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      await vscode.commands.executeCommand(
+        "workbench.action.moveEditorToNextGroup"
+      );
+
+      vscode.window.showInformationMessage(
+        `React documentation for ${url} opened in split view.`
+      );
+    } catch (error) {
+      // Simple Browser command might not be available if user uninstalled the extension,
+      // but it's built-in now. This catch handles general execution failure.
+      vscode.window.showErrorMessage(
+        `Failed to open documentation: ${error.message}`
+      );
+    }
+  }
   async _analyzePropDrilling(webviewView) {
     try {
       vscode.window.showInformationMessage("🔍 Analyzing prop drilling...");
-      
-      const analysis = await this._scanForPropDrilling();
-      
-      webviewView.webview.postMessage({
-        type: 'propDrillingAnalysis',
-        data: analysis
-      });
 
-    } catch (error) {
-      vscode.window.showErrorMessage(`Prop drilling analysis failed: ${error.message}`);
-      
+      const analysis = await this._scanForPropDrilling();
+
       webviewView.webview.postMessage({
-        type: 'propDrillingAnalysis',
+        type: "propDrillingAnalysis",
+        data: analysis,
+      });
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Prop drilling analysis failed: ${error.message}`
+      );
+
+      webviewView.webview.postMessage({
+        type: "propDrillingAnalysis",
         data: {
           error: error.message,
           components: [],
-          suggestions: []
-        }
+          suggestions: [],
+        },
       });
     }
   }
@@ -132,24 +141,25 @@ class SidePanelProvider {
   async _analyzePerformance(webviewView) {
     try {
       vscode.window.showInformationMessage("🚀 Analyzing performance...");
-      
-      const analysis = await this._scanForPerformanceIssues();
-      
-      webviewView.webview.postMessage({
-        type: 'performanceAnalysis',
-        data: analysis
-      });
 
-    } catch (error) {
-      vscode.window.showErrorMessage(`Performance analysis failed: ${error.message}`);
-      
+      const analysis = await this._scanForPerformanceIssues();
+
       webviewView.webview.postMessage({
-        type: 'performanceAnalysis',
+        type: "performanceAnalysis",
+        data: analysis,
+      });
+    } catch (error) {
+      vscode.window.showErrorMessage(
+        `Performance analysis failed: ${error.message}`
+      );
+
+      webviewView.webview.postMessage({
+        type: "performanceAnalysis",
         data: {
           error: error.message,
           issues: [],
-          suggestions: []
-        }
+          suggestions: [],
+        },
       });
     }
   }
@@ -165,13 +175,16 @@ class SidePanelProvider {
     const propDrillingIssues = [];
 
     for (const component of components) {
-      const issues = await this._analyzeComponentForPropDrilling(component.filePath, component.name);
+      const issues = await this._analyzeComponentForPropDrilling(
+        component.filePath,
+        component.name
+      );
       if (issues.length > 0) {
         propDrillingIssues.push({
           component: component.name,
           file: path.relative(workspacePath, component.filePath),
           issues: issues,
-          depth: Math.max(...issues.map(issue => issue.depth))
+          depth: Math.max(...issues.map((issue) => issue.depth)),
         });
       }
     }
@@ -185,8 +198,11 @@ class SidePanelProvider {
       summary: {
         totalComponents: components.length,
         componentsWithIssues: propDrillingIssues.length,
-        maxPropDepth: propDrillingIssues.length > 0 ? Math.max(...propDrillingIssues.map(c => c.depth)) : 0
-      }
+        maxPropDepth:
+          propDrillingIssues.length > 0
+            ? Math.max(...propDrillingIssues.map((c) => c.depth))
+            : 0,
+      },
     };
   }
 
@@ -201,12 +217,14 @@ class SidePanelProvider {
     const performanceIssues = [];
 
     for (const component of components) {
-      const issues = await this._analyzeComponentForPerformance(component.filePath);
+      const issues = await this._analyzeComponentForPerformance(
+        component.filePath
+      );
       if (issues.length > 0) {
         performanceIssues.push({
           component: component.name,
           file: path.relative(workspacePath, component.filePath),
-          issues: issues
+          issues: issues,
         });
       }
     }
@@ -217,39 +235,47 @@ class SidePanelProvider {
       summary: {
         totalComponents: components.length,
         componentsWithIssues: performanceIssues.length,
-        totalIssues: performanceIssues.reduce((sum, comp) => sum + comp.issues.length, 0)
-      }
+        totalIssues: performanceIssues.reduce(
+          (sum, comp) => sum + comp.issues.length,
+          0
+        ),
+      },
     };
   }
 
   async _findReactComponents(workspacePath) {
     const components = [];
-    const jsExtensions = ['.js', '.jsx', '.ts', '.tsx'];
-    
+    const jsExtensions = [".js", ".jsx", ".ts", ".tsx"];
+
     async function scanDirectory(dir) {
       try {
         const files = await fs.promises.readdir(dir, { withFileTypes: true });
-        
+
         for (const file of files) {
           const fullPath = path.join(dir, file.name);
-          
+
           if (file.isDirectory()) {
             // Skip node_modules and other common directories
-            if (!['node_modules', '.git', 'dist', 'build'].includes(file.name)) {
+            if (
+              !["node_modules", ".git", "dist", "build"].includes(file.name)
+            ) {
               await scanDirectory(fullPath);
             }
-          } else if (jsExtensions.includes(path.extname(file.name).toLowerCase())) {
-            const content = await fs.promises.readFile(fullPath, 'utf8');
-            
+          } else if (
+            jsExtensions.includes(path.extname(file.name).toLowerCase())
+          ) {
+            const content = await fs.promises.readFile(fullPath, "utf8");
+
             // Simple regex to find React components
-            const componentRegex = /(?:export\s+)?(?:function|const|class)\s+([A-Z][A-Za-z0-9_]*)\s*(?:\(|\{|=)/g;
+            const componentRegex =
+              /(?:export\s+)?(?:function|const|class)\s+([A-Z][A-Za-z0-9_]*)\s*(?:\(|\{|=)/g;
             let match;
-            
+
             while ((match = componentRegex.exec(content)) !== null) {
               components.push({
                 name: match[1],
                 filePath: fullPath,
-                content: content
+                content: content,
               });
             }
           }
@@ -258,15 +284,15 @@ class SidePanelProvider {
         console.error(`Error scanning directory ${dir}:`, error);
       }
     }
-    
+
     await scanDirectory(workspacePath);
     return components;
   }
- //for displpaying the docs...
+  //for displpaying the docs...
   //  async showDocs() {
   //        const url = 'https://react.dev/reference/react/useState';
- 
-  //        // 1. Execute the Simple Browser command first. 
+
+  //        // 1. Execute the Simple Browser command first.
   //        // We must WAIT for this Promise to resolve to ensure the browser is open and active.
   //        vscode.commands.executeCommand('simpleBrowser.show', url)
   //            .then(() => {
@@ -285,70 +311,74 @@ class SidePanelProvider {
   //    }
   async _analyzeComponentForPropDrilling(filePath, componentName) {
     try {
-      const content = await fs.promises.readFile(filePath, 'utf8');
+      const content = await fs.promises.readFile(filePath, "utf8");
       const issues = [];
-      
+
       // Look for props being passed down through multiple components
-      const propUsageRegex = /this\.props\.([A-Za-z0-9_]+)|props\.([A-Za-z0-9_]+)|([A-Za-z0-9_]+)\s*=\s*props\.([A-Za-z0-9_]+)/g;
+      const propUsageRegex =
+        /this\.props\.([A-Za-z0-9_]+)|props\.([A-Za-z0-9_]+)|([A-Za-z0-9_]+)\s*=\s*props\.([A-Za-z0-9_]+)/g;
       const propMatches = [...content.matchAll(propUsageRegex)];
-      
+
       // Look for component usage with props
       const componentUsageRegex = /<([A-Z][A-Za-z0-9_]*)\s+([^>]*)>/g;
       const componentMatches = [...content.matchAll(componentUsageRegex)];
-      
+
       // Analyze prop usage patterns
       const propUsage = new Map();
-      
+
       for (const match of propMatches) {
         const propName = match[1] || match[2] || match[4];
         if (propName && !propUsage.has(propName)) {
           propUsage.set(propName, {
             name: propName,
             usageCount: 1,
-            passedToChildren: false
+            passedToChildren: false,
           });
         }
       }
-      
+
       // Check if props are passed to children
       for (const match of componentMatches) {
         const propsString = match[2];
-        if (propsString.includes('...props') || propsString.includes('{...props}')) {
+        if (
+          propsString.includes("...props") ||
+          propsString.includes("{...props}")
+        ) {
           issues.push({
-            type: 'propsSpread',
+            type: "propsSpread",
             message: `Props are spread to child component ${match[1]}`,
-            severity: 'medium',
-            depth: 2
+            severity: "medium",
+            depth: 2,
           });
         }
-        
+
         for (const [propName] of propUsage) {
           if (propsString.includes(propName)) {
             const prop = propUsage.get(propName);
             prop.passedToChildren = true;
             issues.push({
-              type: 'propPassing',
+              type: "propPassing",
               prop: propName,
               message: `Prop "${propName}" is passed to child component ${match[1]}`,
-              severity: 'low',
-              depth: 1
+              severity: "low",
+              depth: 1,
             });
           }
         }
       }
-      
+
       // Calculate prop drilling depth based on usage patterns
-      if (propUsage.size > 3) { // Arbitrary threshold for demonstration
+      if (propUsage.size > 3) {
+        // Arbitrary threshold for demonstration
         issues.push({
-          type: 'multipleProps',
+          type: "multipleProps",
           message: `Component uses ${propUsage.size} props - consider context or composition`,
-          severity: 'high',
-          depth: propUsage.size
+          severity: "high",
+          depth: propUsage.size,
         });
       }
-      
+
       return issues;
-      
     } catch (error) {
       console.error(`Error analyzing component ${componentName}:`, error);
       return [];
@@ -357,62 +387,69 @@ class SidePanelProvider {
 
   async _analyzeComponentForPerformance(filePath) {
     try {
-      const content = await fs.promises.readFile(filePath, 'utf8');
+      const content = await fs.promises.readFile(filePath, "utf8");
       const issues = [];
-      
+
       // Check for missing keys in lists
       const listRenderRegex = /\.map\s*\(\s*\(\s*(\w+)\s*\)\s*=>/g;
       const listMatches = [...content.matchAll(listRenderRegex)];
-      
+
       for (const match of listMatches) {
         const itemVar = match[1];
-        const keyCheckRegex = new RegExp(`key\\s*=\\s*\\{[^}]*\\b${itemVar}\\.`);
-        
+        const keyCheckRegex = new RegExp(
+          `key\\s*=\\s*\\{[^}]*\\b${itemVar}\\.`
+        );
+
         if (!keyCheckRegex.test(content)) {
           issues.push({
-            type: 'missingKey',
+            type: "missingKey",
             message: `List rendering may be missing key prop for ${itemVar}`,
-            severity: 'high',
-            fix: `Add key={${itemVar}.id} or similar unique identifier`
+            severity: "high",
+            fix: `Add key={${itemVar}.id} or similar unique identifier`,
           });
         }
       }
-      
+
       // Check for inline functions in props
-      const inlineFunctionRegex = /onClick\s*=\s*{\(\)\s*=>|onChange\s*=\s*{\(\)\s*=>|onSubmit\s*=\s*{\(\)\s*=>/g;
+      const inlineFunctionRegex =
+        /onClick\s*=\s*{\(\)\s*=>|onChange\s*=\s*{\(\)\s*=>|onSubmit\s*=\s*{\(\)\s*=>/g;
       if (inlineFunctionRegex.test(content)) {
         issues.push({
-          type: 'inlineFunction',
-          message: 'Inline functions in props may cause unnecessary re-renders',
-          severity: 'medium',
-          fix: 'Extract functions outside render or use useCallback'
+          type: "inlineFunction",
+          message: "Inline functions in props may cause unnecessary re-renders",
+          severity: "medium",
+          fix: "Extract functions outside render or use useCallback",
         });
       }
-      
+
       // Check for large components that could be split
-      const lineCount = content.split('\n').length;
+      const lineCount = content.split("\n").length;
       if (lineCount > 150) {
         issues.push({
-          type: 'largeComponent',
+          type: "largeComponent",
           message: `Component is large (${lineCount} lines) - consider splitting into smaller components`,
-          severity: 'medium',
-          fix: 'Extract logical sections into separate components'
+          severity: "medium",
+          fix: "Extract logical sections into separate components",
         });
       }
-      
+
       // Check for missing React.memo on likely pure components
-      const pureComponentRegex = /const\s+([A-Z][A-Za-z0-9_]*)\s*=\s*\({\s*[^}]*\s*}\)\s*=>/;
-      if (pureComponentRegex.test(content) && !content.includes('React.memo') && !content.includes('memo(')) {
+      const pureComponentRegex =
+        /const\s+([A-Z][A-Za-z0-9_]*)\s*=\s*\({\s*[^}]*\s*}\)\s*=>/;
+      if (
+        pureComponentRegex.test(content) &&
+        !content.includes("React.memo") &&
+        !content.includes("memo(")
+      ) {
         issues.push({
-          type: 'missingMemo',
-          message: 'Pure component could be wrapped with React.memo',
-          severity: 'low',
-          fix: 'Wrap component with React.memo to prevent unnecessary re-renders'
+          type: "missingMemo",
+          message: "Pure component could be wrapped with React.memo",
+          severity: "low",
+          fix: "Wrap component with React.memo to prevent unnecessary re-renders",
         });
       }
-      
+
       return issues;
-      
     } catch (error) {
       console.error(`Error analyzing performance for ${filePath}:`, error);
       return [];
@@ -421,59 +458,63 @@ class SidePanelProvider {
 
   _generatePropDrillingSuggestions(issues) {
     const suggestions = [];
-    
+
     if (issues.length === 0) {
-      return [{ type: 'success', message: 'No significant prop drilling detected!' }];
+      return [
+        { type: "success", message: "No significant prop drilling detected!" },
+      ];
     }
-    
-    const deepDrilling = issues.filter(issue => issue.depth >= 3);
+
+    const deepDrilling = issues.filter((issue) => issue.depth >= 3);
     if (deepDrilling.length > 0) {
       suggestions.push({
-        type: 'high',
-        message: `Consider using React Context for ${deepDrilling.length} components with deep prop drilling`
+        type: "high",
+        message: `Consider using React Context for ${deepDrilling.length} components with deep prop drilling`,
       });
     }
-    
-    const componentComposition = issues.filter(issue => 
-      issue.issues.some(i => i.type === 'propsSpread')
+
+    const componentComposition = issues.filter((issue) =>
+      issue.issues.some((i) => i.type === "propsSpread")
     );
     if (componentComposition.length > 0) {
       suggestions.push({
-        type: 'medium',
-        message: `Try component composition instead of prop spreading for ${componentComposition.length} components`
+        type: "medium",
+        message: `Try component composition instead of prop spreading for ${componentComposition.length} components`,
       });
     }
-    
+
     return suggestions;
   }
 
   _generatePerformanceSuggestions(issues) {
     const suggestions = [];
-    
+
     if (issues.length === 0) {
-      return [{ type: 'success', message: 'No major performance issues detected!' }];
+      return [
+        { type: "success", message: "No major performance issues detected!" },
+      ];
     }
-    
-    const missingKeys = issues.flatMap(comp => 
-      comp.issues.filter(issue => issue.type === 'missingKey')
+
+    const missingKeys = issues.flatMap((comp) =>
+      comp.issues.filter((issue) => issue.type === "missingKey")
     );
     if (missingKeys.length > 0) {
       suggestions.push({
-        type: 'high',
-        message: `Add key props to ${missingKeys.length} list renderers`
+        type: "high",
+        message: `Add key props to ${missingKeys.length} list renderers`,
       });
     }
-    
-    const inlineFunctions = issues.flatMap(comp => 
-      comp.issues.filter(issue => issue.type === 'inlineFunction')
+
+    const inlineFunctions = issues.flatMap((comp) =>
+      comp.issues.filter((issue) => issue.type === "inlineFunction")
     );
     if (inlineFunctions.length > 0) {
       suggestions.push({
-        type: 'medium',
-        message: `Extract ${inlineFunctions.length} inline functions to prevent re-renders`
+        type: "medium",
+        message: `Extract ${inlineFunctions.length} inline functions to prevent re-renders`,
       });
     }
-    
+
     return suggestions;
   }
 
@@ -512,7 +553,7 @@ class SidePanelProvider {
         }
 
         const startTime = Date.now();
-        
+
         const req = httpModule.request(url, options, (res) => {
           let data = "";
           const responseTime = Date.now() - startTime;
@@ -539,7 +580,8 @@ class SidePanelProvider {
               resolve({
                 totalRecords: 1,
                 responseTime: responseTime,
-                dataSize: Math.round((Buffer.byteLength(data) / 1024) * 100) / 100,
+                dataSize:
+                  Math.round((Buffer.byteLength(data) / 1024) * 100) / 100,
                 cacheStatus: res.headers["cache-control"] || "unknown",
                 statusCode: res.statusCode,
                 contentType: res.headers["content-type"] || "text/plain",
@@ -547,7 +589,7 @@ class SidePanelProvider {
                 users: this._extractUsersData(data),
                 fullResponse: data,
                 headers: res.headers,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
               });
             }
           });
@@ -577,7 +619,8 @@ class SidePanelProvider {
   _formatAPIResponse(data, statusCode, responseTime, headers) {
     // Extract meaningful data from the actual API response
     const users = this._extractUsersData(data);
-    const dataSize = Math.round((JSON.stringify(data).length / 1024) * 100) / 100;
+    const dataSize =
+      Math.round((JSON.stringify(data).length / 1024) * 100) / 100;
 
     return {
       totalRecords: this._calculateTotalRecords(data),
@@ -589,14 +632,14 @@ class SidePanelProvider {
       users: users,
       fullResponse: data,
       headers: headers,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 
   _calculateTotalRecords(data) {
     // Calculate total records based on actual API response structure
     if (Array.isArray(data)) return data.length;
-    if (data && typeof data === 'object') {
+    if (data && typeof data === "object") {
       if (Array.isArray(data.data)) return data.data.length;
       if (Array.isArray(data.users)) return data.users.length;
       if (Array.isArray(data.items)) return data.items.length;
@@ -609,40 +652,48 @@ class SidePanelProvider {
   _extractUsersData(data) {
     // Extract user-like data from actual API response
     let extractedData = [];
-    
+
     // Handle array responses
     if (Array.isArray(data)) {
       extractedData = data.slice(0, 10);
-    } 
+    }
     // Handle nested array structures
-    else if (data && typeof data === 'object') {
+    else if (data && typeof data === "object") {
       if (Array.isArray(data.data)) extractedData = data.data.slice(0, 10);
-      else if (Array.isArray(data.users)) extractedData = data.users.slice(0, 10);
-      else if (Array.isArray(data.items)) extractedData = data.items.slice(0, 10);
-      else if (Array.isArray(data.results)) extractedData = data.results.slice(0, 10);
+      else if (Array.isArray(data.users))
+        extractedData = data.users.slice(0, 10);
+      else if (Array.isArray(data.items))
+        extractedData = data.items.slice(0, 10);
+      else if (Array.isArray(data.results))
+        extractedData = data.results.slice(0, 10);
       else extractedData = [data]; // Single object response
     }
 
     // Format the extracted data
     return extractedData.map((item, index) => {
-      if (typeof item === 'object' && item !== null) {
+      if (typeof item === "object" && item !== null) {
         return {
           id: item.id || index + 1,
-          name: item.name || item.username || item.fullName || item.title || `Item ${index + 1}`,
+          name:
+            item.name ||
+            item.username ||
+            item.fullName ||
+            item.title ||
+            `Item ${index + 1}`,
           email: item.email || "N/A",
           status: this._determineStatus(item),
           role: item.role || item.type || item.category || "N/A",
-          ...item // Include all original properties
+          ...item, // Include all original properties
         };
       }
-      
+
       // Handle primitive values
       return {
         id: index + 1,
         name: `Item ${index + 1}`,
         value: item,
         status: "N/A",
-        role: "Primitive"
+        role: "Primitive",
       };
     });
   }
@@ -650,8 +701,10 @@ class SidePanelProvider {
   _determineStatus(item) {
     if (item.status) return item.status;
     if (item.active !== undefined) return item.active ? "Active" : "Inactive";
-    if (item.enabled !== undefined) return item.enabled ? "Enabled" : "Disabled";
-    if (item.published !== undefined) return item.published ? "Published" : "Draft";
+    if (item.enabled !== undefined)
+      return item.enabled ? "Enabled" : "Disabled";
+    if (item.published !== undefined)
+      return item.published ? "Published" : "Draft";
     return "Unknown";
   }
 
@@ -660,7 +713,8 @@ class SidePanelProvider {
     // This can be extended to connect to actual databases
     return {
       tables: [],
-      message: "Database schema feature coming soon. Connect to your database to see real schema data."
+      message:
+        "Database schema feature coming soon. Connect to your database to see real schema data.",
     };
   }
 
@@ -726,6 +780,13 @@ class SidePanelProvider {
           .header .subtitle {
             font-size: 12px;
             color: var(--text-secondary);
+            text-align: center;
+          }
+          .subtitle2 {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+            // margin-left: 20px;
           }
 
           .section {
@@ -1149,72 +1210,73 @@ class SidePanelProvider {
                  Tsed's React Dev Tools</h1>
             <div class="subtitle">A React Development Assistant for my fellow nerds</div>
           </div>
-
+          <div class="header">
+          </div>
           <div class="section">
-  <div class="section-header" style="margin-bottom:12px" onclick="showDocs()">
-    <img src="https://cdn.worldvectorlogo.com/logos/react-1.svg" alt="Icon" width="20" hieght="30" style="vertical-align: middle; margin-right: 8px;">
-    Open Official Documentation
-  </div>          <!-- API Data Visualization Section - Moved to top as primary feature -->
+          <div class="section-header" style="margin-bottom:12px" onclick="showDocs()">
+          <img src="https://cdn.worldvectorlogo.com/logos/react-1.svg" alt="Icon" width="20" hieght="30" style="vertical-align: middle; margin-right: 8px;">
+          Open Official Documentation
+          </div>          <!-- API Data Visualization Section - Moved to top as primary feature -->
           <div class="section">
-            <div class="section-header" onclick="toggleSection('api-visualization')">
-              📊 API Data Explorer
+          <div class="section-header" onclick="toggleSection('api-visualization')">
+          📊 API Data Explorer
             </div>
             <div class="section-content" id="api-visualization">
-              <div class="tabs">
-                <div class="tab active" onclick="switchTab('apiTab')">🌐 API Request</div>
+            <div class="tabs">
+            <div class="tab active" onclick="switchTab('apiTab')">🌐 API Request</div>
               </div>
 
               <div id="apiTab" class="tab-content active">
-                <div class="input-group">
-                  <label for="apiEndpoint">
-                    <span style="margin-right: 6px;">🔗</span>
-                    API Endpoint URL
-                  </label>
-                  <div class="flex-row">
-                    <input 
-                      type="text" 
-                      id="apiEndpoint" 
-                      placeholder="https://jsonplaceholder.typicode.com/users"
-                      value="https://jsonplaceholder.typicode.com/users"
-                    >
-                    <button class="btn btn-info" onclick="testEndpoint()">
-                      🔍 Test
-                    </button>
-                  </div>
+              <div class="input-group">
+              <label for="apiEndpoint">
+              <span style="margin-right: 6px;">🔗</span>
+              API Endpoint URL
+              </label>
+              <div class="flex-row">
+              <input 
+              type="text" 
+              id="apiEndpoint" 
+              placeholder="https://jsonplaceholder.typicode.com/users"
+              value="https://jsonplaceholder.typicode.com/users"
+              >
+              <button class="btn btn-info" onclick="testEndpoint()">
+              🔍 Test
+              </button>
+              </div>
+              </div>
+              
+              <div class="input-group">
+              <label for="requestMethod">
+              <span style="margin-right: 6px;">⚡</span>
+              HTTP Method
+              </label>
+              <select id="requestMethod">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
+              </select>
                 </div>
-
+                
                 <div class="input-group">
-                  <label for="requestMethod">
-                    <span style="margin-right: 6px;">⚡</span>
-                    HTTP Method
-                  </label>
-                  <select id="requestMethod">
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                    <option value="PUT">PUT</option>
-                    <option value="DELETE">DELETE</option>
-                    <option value="PATCH">PATCH</option>
-                  </select>
-                </div>
-
-                <div class="input-group">
-                  <label for="requestHeaders">
-                    <span style="margin-right: 6px;">📋</span>
-                    Request Headers (JSON)
-                  </label>
-                  <textarea 
+                <label for="requestHeaders">
+                <span style="margin-right: 6px;">📋</span>
+                Request Headers (JSON)
+                </label>
+                <textarea 
                     id="requestHeaders" 
                     placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
                     rows="3"
-                  ></textarea>
-                </div>
-
-                <div class="input-group">
-                  <label for="requestBody">
+                    ></textarea>
+                    </div>
+                    
+                    <div class="input-group">
+                    <label for="requestBody">
                     <span style="margin-right: 6px;">📦</span>
                     Request Body (JSON)
-                  </label>
-                  <textarea 
+                    </label>
+                    <textarea 
                     id="requestBody" 
                     placeholder='{"key": "value"}'
                     rows="3"
@@ -1222,133 +1284,145 @@ class SidePanelProvider {
                 </div>
 
                 <div class="flex-row">
-                  <button class="btn btn-success" onclick="fetchCustomAPI()" style="flex: 1;" id="fetchBtn">
-                    🚀 Fetch Real API Data
-                  </button>
-                  <button class="btn btn-secondary" onclick="clearAPIFields()">
-                    🗑️ Clear
-                  </button>
+                <button class="btn btn-success" onclick="fetchCustomAPI()" style="flex: 1;" id="fetchBtn">
+                🚀 Fetch Real API Data
+                </button>
+                <button class="btn btn-secondary" onclick="clearAPIFields()">
+                🗑️ Clear
+                </button>
                 </div>
-
+                
                 <div class="input-group" id="apiStatus" style="display: none;">
-                  <label>API Status</label>
-                  <div id="statusMessage" class="analysis-result">
-                    <!-- Status will appear here -->
-                  </div>
+                <label>API Status</label>
+                <div id="statusMessage" class="analysis-result">
+                <!-- Status will appear here -->
                 </div>
-
+                </div>
+                
                 <div id="apiDataContainer" class="hidden">
-                  <div class="database-view">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                      <h4>📋 Live API Response</h4>
-                      <button class="btn btn-secondary" onclick="exportData()" style="width: auto; padding: 4px 8px; font-size: 11px;">
-                        💾 Export JSON
-                      </button>
-                    </div>
-                    <div id="apiTablesContainer"></div>
-                  </div>
+                <div class="database-view">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h4>📋 Live API Response</h4>
+                <button class="btn btn-secondary" onclick="exportData()" style="width: auto; padding: 4px 8px; font-size: 11px;">
+                💾 Export JSON
+                </button>
                 </div>
-              </div>
-
-              <div id="schemaTab" class="tab-content">
+                <div id="apiTablesContainer"></div>
+                </div>
+                </div>
+                </div>
+                
+                <div id="schemaTab" class="tab-content">
                 <div class="empty-state">
-                  🚧 Database schema feature coming soon<br>
-                  <small>Connect to your database to visualize real schema data</small>
+                🚧 Database schema feature coming soon<br>
+                <small>Connect to your database to visualize real schema data</small>
                 </div>
                 <button class="btn btn-info" onclick="fetchSchemaData()" style="margin-top: 12px;">
-                  🗃️ Try Schema Load
+                🗃️ Try Schema Load
                 </button>
                 <div id="schemaContainer" class="hidden">
-                  <div class="database-view">
-                    <h4>🏗️ Database Schema</h4>
-                    <div class="schema-container" id="schemaTablesContainer"></div>
-                  </div>
+                <div class="database-view">
+                <h4>🏗️ Database Schema</h4>
+                <div class="schema-container" id="schemaTablesContainer"></div>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Component Generator Section -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection('component-generator')">
-              🛠️ Component Generator
-            </div>
-            <div class="section-content" id="component-generator">
-              <div class="input-group">
+                </div>
+                </div>
+                </div>
+                </div>
+                
+                <!-- Component Generator Section -->
+                <div class="section">
+                <div class="section-header" onclick="toggleSection('component-generator')">
+                🛠️ Component Generator
+                </div>
+                <div class="section-content" id="component-generator">
+                <div class="input-group">
                 <label for="componentName">Component Name</label>
                 <input type="text" id="componentName" placeholder="Enter component name...">
-              </div>
-              <div class="input-group">
+                </div>
+                <div class="input-group">
                 <label for="componentType">Component Type</label>
                 <select id="componentType">
-                  <option value="functional">Functional Component</option>
-                  <option value="withState">With useState</option>
+                <option value="functional">Functional Component</option>
+                <option value="withState">With useState</option>
                   <option value="withEffects">With useEffect</option>
                   <option value="memoized">Memoized Component</option>
-                </select>
-              </div>
-              <button class="btn btn-success" onclick="generateComponent()">
-                ⚡ Generate Component
-              </button>
-              <div class="code-preview" id="componentPreview">
-// Generated component will appear here
-              </div>
-            </div>
-          </div>
-
-          <!-- Quick Actions Section -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection('quick-actions')">
-              🚀 Quick Actions
-            </div>
-            <div class="section-content" id="quick-actions">
-              <div class="btn-group">
-                <button class="btn" onclick="insertSnippet('useState')">
+                  </select>
+                  </div>
+                  <button class="btn btn-success" onclick="generateComponent()">
+                  ⚡ Generate Component
+                  </button>
+                  <div class="code-preview" id="componentPreview">
+                  // Generated component will appear here
+                  </div>
+                  </div>
+                  </div>
+                  
+                  <!-- Quick Actions Section -->
+                  <div class="section">
+                  <div class="section-header" onclick="toggleSection('quick-actions')">
+                  🚀 Quick Actions
+                  </div>
+                  <div class="section-content" id="quick-actions">
+                  <div class="btn-group">
+                  <button class="btn" onclick="insertSnippet('useState')">
                   🎣 Insert useState Hook
-                </button>
-                <button class="btn" onclick="insertSnippet('useEffect')">
+                  </button>
+                  <button class="btn" onclick="insertSnippet('useEffect')">
                   🔄 Insert useEffect Hook
-                </button>
-                <button class="btn" onclick="insertSnippet('customHook')">
+                  </button>
+                  <button class="btn" onclick="insertSnippet('customHook')">
                   🛠️ Insert Custom Hook Template
-                </button>
-                <button class="btn btn-warning" onclick="analyzePropDrilling()">
+                  </button>
+                  <button class="btn btn-warning" onclick="analyzePropDrilling()">
                   🔍 Detect Prop Drilling
-                </button>
-                <button class="btn btn-info" onclick="analyzePerformance()">
+                  </button>
+                  <button class="btn btn-info" onclick="analyzePerformance()">
                   ⚡ Performance Analysis
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Analysis Results Section -->
-          <div class="section">
-            <div class="section-header" onclick="toggleSection('analysis-results')">
-              📈 Analysis Results
-            </div>
-            <div class="section-content" id="analysis-results">
-              <div id="propDrillingResult" class="analysis-result">
-                Run "Detect Prop Drilling" to analyze your component tree
-              </div>
-              <div id="performanceResult" class="analysis-result">
-                Run "Performance Analysis" to get optimization suggestions
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <script>
-          const vscode = acquireVsCodeApi();
-  
-        function showDocs() {
-        const url = 'https://react.dev/reference/react/useState'; 
-
+                  </button>
+                  </div>
+                  </div>
+                  </div>
+                  
+                  <!-- Analysis Results Section -->
+                  <div class="section">
+                  <div class="section-header" onclick="toggleSection('analysis-results')">
+                  📈 Analysis Results
+                  </div>
+                  <div class="section-content" id="analysis-results">
+                  <div id="propDrillingResult" class="analysis-result">
+                  Run "Detect Prop Drilling" to analyze your component tree
+                  </div>
+                  <div id="performanceResult" class="analysis-result">
+                  Run "Performance Analysis" to get optimization suggestions
+                  </div>
+                  </div>
+                  <h1>
+                    <button class="btn btn-info" onclick="showPreview()" style="display: inline-flex; align-items: center; gap: 8px;background-color:#4CAF50;margin-top:20px;">
+                      <img src="https://github.com/Tsedexashu08/Power-Apps-Pngs/blob/main/lg.png?raw=true" alt="Icon" id="icon" width="30" height="30"/>
+                      Live Preview
+                    </button>
+                  </h1>
+                  <div class="subtitle2">  Click to see a live preview of your Development server ⚡</div>
+                  </div>
+                  </div>
+                  
+                  <script>
+                  const vscode = acquireVsCodeApi();
+                  
+                  function showDocs() {
+                    const url = 'https://react.dev/reference/react/useState'; 
+                    
         // Posting the message back to the extension host 
           vscode.postMessage({
             type: 'OpenDocs'
         });
     }
+                  function showPreview() {
+                    vscode.postMessage({
+                        type: 'showPreview'
+                    });
+                }
           let currentAPIData = null;
 
           // Collapsible sections functionality

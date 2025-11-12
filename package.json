@@ -10,13 +10,17 @@
   "categories": [
     "Other"
   ],
- 
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
         "command": "tsed-s-react-dev-kit.helloWorld",
         "title": "Hello World",
+        "category": "TsED React Kit"
+      },
+      {
+        "command": "tsed-s-react-dev-kit.OpenComponentPreview",
+        "title": "Open Component Preview",
         "category": "TsED React Kit"
       },
       {

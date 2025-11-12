@@ -1,65 +1,52 @@
-# tsed-s-react-dev-kit README
+# Tsed-s-React Dev Kit
 
-This is the README for your extension "tsed-s-react-dev-kit". After writing up a brief description, we recommend including the following sections.
+[![Version](https://img.shields.io/visual-studio-marketplace/v/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
 
-## Features
+The Tsed-s-React Dev Kit is a Visual Studio Code extension designed to streamline your development workflow when working with [Ts.ED](https://tsed.io/) and React. It provides a live preview of your React components and a helpful side panel for quick access to common actions.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+![Placeholder for a screenshot of the extension in action](https://via.placeholder.com/800x400.png?text=Tsed-s-React+Dev+Kit+in+Action)
 
-For example if there is an image subfolder under your extension project workspace:
+## Overview
 
-\!\[feature X\]\(images/feature-x.png\)
+Developing with Ts.ED and React is a powerful combination, but it can sometimes be cumbersome to switch between your code and the browser to see your component changes. This extension solves that problem by providing a live component preview directly within your editor.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+The side panel also provides quick access to common commands and documentation, saving you time and keeping you in the flow.
 
-## Requirements
+## Key Features
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+*   **Live Component Preview:** See your React components update in real-time as you code.
+*   **Side Panel:** Quick access to common commands, documentation, and project information.
+*   **Seamless Integration:** Works with your existing Ts.ED and React projects.
+
+### Live Component Preview
+
+The live component previewer will automatically detect the active React component and render it in a separate view. This allows you to see your changes instantly without having to manually refresh your browser.
+
+![Placeholder for a screenshot of the component preview](https://via.placeholder.com/600x300.png?text=Live+Component+Preview)
+
+### Side Panel
+
+The side panel provides a convenient way to access common actions and information.
+
+![Placeholder for a screenshot of the side panel](https://via.placeholder.com/300x500.png?text=Side+Panel)
+
+## Getting Started
+
+1.  Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit).
+2.  Open a Ts.ED and React project.
+3.  Open a React component file (`.js`, `.jsx`, `.ts`, or `.tsx`).
+4.  Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and run the command `Tsed-s-React: Show Component Preview`.
+5.  The component preview will open in a new tab.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension does not yet have any configurable settings.
 
-For example:
+## Contributing
 
-This extension contributes the following settings:
+Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue on the [GitHub repository](https://github.com/tsed-s-react-dev-kit/tsed-s-react-dev-kit).
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+## License
 
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+This project is licensed under the [MIT License](LICENSE).
