@@ -3,13 +3,12 @@
 [![Version](https://img.shields.io/visual-studio-marketplace/v/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
 
-The Tsed-s-React Dev Kit is a Visual Studio Code extension designed to streamline your development workflow when working with [Ts.ED](https://tsed.io/) and React. It provides a live preview of your React components and a helpful side panel for quick access to common actions.
 
 ![Placeholder for a screenshot of the extension in action](https://via.placeholder.com/800x400.png?text=Tsed-s-React+Dev+Kit+in+Action)
 
 ## Overview
 
-Developing with Ts.ED and React is a powerful combination, but it can sometimes be cumbersome to switch between your code and the browser to see your component changes. This extension solves that problem by providing a live component preview directly within your editor.
+Developing withReact is a powerful combination can sometimes be cumbersome to switch between your code and the browser to see your component changes. This extension solves that problem by providing a live component preview directly within your editor.
 
 The side panel also provides quick access to common commands and documentation, saving you time and keeping you in the flow.
 
@@ -17,7 +16,7 @@ The side panel also provides quick access to common commands and documentation, 
 
 *   **Live Component Preview:** See your React components update in real-time as you code.
 *   **Side Panel:** Quick access to common commands, documentation, and project information.
-*   **Seamless Integration:** Works with your existing Ts.ED and React projects.
+*   **Seamless Integration:** Works with your existing React projects.
 
 ### Live Component Preview
 
@@ -34,7 +33,7 @@ The side panel provides a convenient way to access common actions and informatio
 ## Getting Started
 
 1.  Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit).
-2.  Open a Ts.ED and React project.
+2.  Open a  React project.
 3.  Open a React component file (`.js`, `.jsx`, `.ts`, or `.tsx`).
 4.  Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and run the command `Tsed-s-React: Show Component Preview`.
 5.  The component preview will open in a new tab.
