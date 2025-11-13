@@ -4,11 +4,11 @@
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
 
 
-![Placeholder for a screenshot of the extension in action](https://via.placeholder.com/800x400.png?text=Tsed-s-React+Dev+Kit+in+Action)
+![Placeholder for a screenshot of the extension in action](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/preview.png?raw=true)
 
 ## Overview
 
-Developing withReact is a powerful combination can sometimes be cumbersome to switch between your code and the browser to see your component changes. This extension solves that problem by providing a live component preview directly within your editor.
+When developing with React it can sometimes be cumbersome to switch between your code and the browser to see your component changes. This extension solves that problem by providing a live component preview directly within your editor.
 
 The side panel also provides quick access to common commands and documentation, saving you time and keeping you in the flow.
 
@@ -22,12 +22,18 @@ The side panel also provides quick access to common commands and documentation, 
 
 The live component previewer will automatically detect the active development server and render it in a separate view. This allows you to see your changes instantly without having to manually refresh your browser.
 
-![Placeholder for a screenshot of the component preview](https://via.placeholder.com/600x300.png?text=Live+Component+Preview)
+[https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/livepreview.png?raw=true]
 ### Side Panel
 
 The side panel provides a convenient way to access common actions and information.
 
-![Placeholder for a screenshot of the side panel](https://via.placeholder.com/300x500.png?text=Side+Panel)
+[https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/quickactions.png?raw=true]
+
+### Opening Documentation In the editor
+
+Easily access React documentation directly within your editor without needing to switch contexts.
+
+[https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/rctdocs.png?raw=true]
 
 ## Getting Started
 
@@ -43,7 +49,7 @@ This extension does not yet have any configurable settings.
 
 ## Contributing
 
-Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue on the [GitHub repository](https://github.com/tsed-s-react-dev-kit/tsed-s-react-dev-kit).
+Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue on the [GitHub repository](https://github.com/Tsedexashu08/tseds-react-dev-kit).
 
 ## License
 
