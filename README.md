@@ -4,7 +4,7 @@
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
 
 
-![Placeholder for a screenshot of the extension in action](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/preview.png?raw=true)
+![Placeholder for a screenshot of the extension in action](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/pvw.png?raw=true)
 
 ## Overview
 
