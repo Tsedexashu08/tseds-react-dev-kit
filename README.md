@@ -20,10 +20,9 @@ The side panel also provides quick access to common commands and documentation, 
 
 ### Live Component Preview
 
-The live component previewer will automatically detect the active React component and render it in a separate view. This allows you to see your changes instantly without having to manually refresh your browser.
+The live component previewer will automatically detect the active development server and render it in a separate view. This allows you to see your changes instantly without having to manually refresh your browser.
 
 ![Placeholder for a screenshot of the component preview](https://via.placeholder.com/600x300.png?text=Live+Component+Preview)
-
 ### Side Panel
 
 The side panel provides a convenient way to access common actions and information.
