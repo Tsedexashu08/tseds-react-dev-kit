@@ -1,7 +1,7 @@
 # Tsed-s-React Dev Kit
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsedex.tsed-s-react-dev-kit)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/tsedex.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsedex.tsed-s-react-dev-kit)
+[![Installs](https://marketplace.visualstudio.com/items?itemName=tsedex.tsed-s-react-dev-kit)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
 
 
 ![Placeholder for a screenshot of the extension in action](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/pvw.png?raw=true)
