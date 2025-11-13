@@ -1,7 +1,7 @@
 # Tsed-s-React Dev Kit
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/tsedex.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsedex.tsed-s-react-dev-kit)
-[![Installs](https://marketplace.visualstudio.com/items?itemName=tsedex.tsed-s-react-dev-kit)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/tsedex.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsedex.tsed-s-react-dev-kit)
 
 
 ![Placeholder for a screenshot of the extension in action](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/pvw.png?raw=true)
@@ -37,7 +37,7 @@ Easily access React documentation directly within your editor without needing to
 
 ## Getting Started
 
-1.  Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit).
+1.  Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=tsedex.tsed-s-react-dev-kit).
 2.  Open a  React project.
 3.  Open a React component file (`.js`, `.jsx`, `.ts`, or `.tsx`).
 4.  Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) and run the command `Tsed-s-React: Show Component Preview`.
