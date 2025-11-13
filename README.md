@@ -1,6 +1,6 @@
 # Tsed-s-React Dev Kit
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/manage/publishers/tsedex/extensions/tsed-s-react-dev-kit/hub)
 [![Installs](https://img.shields.io/visual-studio-marketplace/i/tsed-s-react-dev-kit.tsed-s-react-dev-kit.svg)](https://marketplace.visualstudio.com/items?itemName=tsed-s-react-dev-kit.tsed-s-react-dev-kit)
 
 
