@@ -1,6 +1,7 @@
 {
   "name": "tsed-s-react-dev-kit",
   "displayName": "Tsed's React Dev Kit",
+  "publisher": "tsedex",
   "description": "extension for manageing/dealing with common headaches during web development with react",
   "icon": "icon.png",
   "version": "0.0.1",
@@ -11,6 +12,12 @@
     "Other"
   ],
   "main": "./extension.js",
+  "activationEvents": [
+    "onView:tsedSidePanel",
+    "onCommand:tsed-s-react-dev-kit.openSidePanel",
+    "onCommand:tsed-s-react-dev-kit.OpenComponentPreview",
+    "onCommand:tsed-s-react-dev-kit.helloWorld"
+  ],
   "contributes": {
     "commands": [
       {
@@ -58,5 +65,11 @@
     "eslint": "^9.36.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2"
-  }
+  },
+  "repository": {
+"type": "git",
+"url": "https://github.com/Tsedexashu08/tsed-s-react-dev-kit.git"
+},
+"homepage": "https://github.com/Tsedexashu08/tsed-s-react-dev-kit",
+"bugs": { "url": "https://github.com/Tsedexashu08/tsed-s-react-dev-kit/issues" }
 }
