@@ -22,18 +22,18 @@ The side panel also provides quick access to common commands and documentation, 
 
 The live component previewer will automatically detect the active development server and render it in a separate view. This allows you to see your changes instantly without having to manually refresh your browser.
 
-[https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/livepreview.png?raw=true]
+[image](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/livepreview.png?raw=true)
 ### Side Panel
 
 The side panel provides a convenient way to access common actions and information.
 
-[https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/quickactions.png?raw=true]
+[image](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/quickactions.png?raw=true)
 
 ### Opening Documentation In the editor
 
 Easily access React documentation directly within your editor without needing to switch contexts.
 
-[https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/rctdocs.png?raw=true]
+[image](https://github.com/Tsedexashu08/tseds-react-dev-kit/blob/master/src/Images/rctdocs.png?raw=true)
 
 ## Getting Started
 
